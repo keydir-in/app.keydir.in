@@ -1,0 +1,151 @@
+/* ══════════════════════════════════════════
+   SKELETON LOADING SYSTEM
+   ══════════════════════════════════════════ */
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-a) 25%,
+    var(--skeleton-b) 50%,
+    var(--skeleton-a) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--rad);
+}
+
+.skeleton-card {
+  background: var(--surface);
+  border: var(--bd-thick);
+  box-shadow: var(--sh);
+  padding: 0;
+}
+
+.skeleton-img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+
+.skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-text-line {
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-text-line:last-child {
+  width: 60%;
+}
+
+.skeleton-circle {
+  border-radius: var(--rad-round);
+}
+
+.skeleton-rectangle {
+  border-radius: var(--rad);
+}
+
+.skeleton-badge {
+  border-radius: var(--rad);
+}
+
+.skeleton-button {
+  border-radius: var(--rad);
+}
+
+.skeleton-chip {
+  border-radius: var(--rad);
+}
+
+/* Profile product card skeleton */
+.profile-product-card .skeleton-img {
+  aspect-ratio: 1;
+}
+
+.profile-product-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* Compare page skeleton */
+.cmp-card {
+  padding: var(--sp-4);
+}
+
+/* Admin editor skeleton */
+.pe-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pe-section {
+  padding: var(--sp-4);
+  border: var(--bd-thick);
+  background: var(--surface);
+}
+
+/* Search skeleton */
+.nav-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.nav-search-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Filter skeleton */
+.kb-explorer-chips-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Hero skeleton */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 60px;
+  align-items: center;
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-right {
+  display: flex;
+  justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .hero-right {
+    display: none;
+  }
+}

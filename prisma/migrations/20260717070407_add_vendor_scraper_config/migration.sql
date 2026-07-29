@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "Vendor" ADD COLUMN     "availabilityAttribute" TEXT NOT NULL DEFAULT 'text',
+ADD COLUMN     "availabilitySelector" TEXT,
+ADD COLUMN     "cloudflareProtected" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "customHeaders" TEXT,
+ADD COLUMN     "customScraper" TEXT,
+ADD COLUMN     "imageSelector" TEXT,
+ADD COLUMN     "priceAttribute" TEXT NOT NULL DEFAULT 'text',
+ADD COLUMN     "priceSelector" TEXT,
+ADD COLUMN     "productExistsSelector" TEXT,
+ADD COLUMN     "scraperEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "scraperEngine" TEXT NOT NULL DEFAULT 'cheerio',
+ADD COLUMN     "scraperNotes" TEXT,
+ADD COLUMN     "scraperVersion" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN     "titleSelector" TEXT,
+ADD COLUMN     "useJavaScriptRendering" BOOLEAN NOT NULL DEFAULT false;

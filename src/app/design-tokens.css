@@ -1,0 +1,538 @@
+/* ═══════════════════════════════════════════════════════════════
+   KEYDIR DESIGN TOKENS
+   Extracted from: Keydir.in/assets/css/style.css + index.html
+   Every value below is measured from the original source.
+   Do not estimate. Do not round. Copy exactly.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────
+   BRAND PALETTE — constant across themes
+   Source: style.css :root lines 12-21
+   ───────────────────────────────────────── */
+:root {
+  --yellow: #FAFF00;
+  --green: #00FF6A;
+  --blue: #3B82F6;
+  --pink: #FF3FA4;
+  --orange: #FF6B00;
+  --red: #FF2A2A;
+  --purple: #A855F7;
+  --cyan: #00E5FF;
+  --teal: #00B4A0;
+}
+
+/* ─────────────────────────────────────────
+   FONT STACKS
+   Source: style.css :root lines 23-25
+   ───────────────────────────────────────── */
+:root {
+  --f-d: 'Space Grotesk', sans-serif;
+  --f-m: 'JetBrains Mono', monospace;
+}
+
+/* ─────────────────────────────────────────
+   LIGHT THEME TOKENS
+   Source: style.css :root lines 28-62
+   ───────────────────────────────────────── */
+:root {
+  --nav-h: 68px;
+
+  /* Backgrounds */
+  --bg: #FFFCF0;
+  --bg-alt: #F5F2E4;
+  --surface: #FFFCF0;
+  --surface-raised: #FFFFFF;
+
+  /* Borders */
+  --border: #111111;
+  --border-subtle: #CCCCCC;
+
+  /* Text */
+  --text: #111111;
+  --text-inv: #FFFCF0;
+  --text-muted: #555555;
+  --text-dim: #999999;
+
+  /* Shadows */
+  --shadow: #111111;
+  --sh: 4px 4px 0 var(--shadow);
+  --sh-lg: 8px 8px 0 var(--shadow);
+  --sh-xl: 12px 12px 0 var(--shadow);
+
+  /* Grid background */
+  --dot-bg: #111111;
+  --grid-line: rgba(0,0,0,.06);
+
+  /* Marquee */
+  --marquee-bg: #111111;
+  --marquee-text: #FAFF00;
+
+  /* Dark cards (used in footer, alternating stats) */
+  --dark-card-bg: #111111;
+  --dark-card-text: #FFFCF0;
+  --dark-card-muted: #666666;
+  --dark-card-border: #222222;
+
+  /* CTA */
+  --cta-bg: #FAFF00;
+  --cta-text: #111111;
+  --cta-text-muted: #333333;
+
+  /* Warn/Tip (from style.css) */
+  --warn-bg: #fff0f0;
+  --warn-border: #FF2A2A;
+  --warn-text: #FF2A2A;
+  --tip-bg: #FAFF00;
+  --tip-text: #333333;
+
+  /* Inputs */
+  --input-bg: #FFFCF0;
+  --input-focus: #FAFF00;
+
+  /* Skeleton loading */
+  --skeleton-a: #f0f0f0;
+  --skeleton-b: #e0e0e0;
+}
+
+/* ─────────────────────────────────────────
+   DARK THEME TOKENS
+   Source: style.css [data-theme="dark"] lines 68-103
+   ───────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #181818;
+  --bg-alt: #202020;
+  --surface: #222222;
+  --surface-raised: #2A2A2A;
+
+  --border: #484848;
+  --border-subtle: #333333;
+
+  --text: #F0EDD8;
+  --text-inv: #181818;
+  --text-muted: #A8A490;
+  --text-dim: #666666;
+
+  --shadow: #000000;
+  --sh: 4px 4px 0 var(--shadow);
+  --sh-lg: 8px 8px 0 var(--shadow);
+  --sh-xl: 12px 12px 0 var(--shadow);
+
+  --dot-bg: #333333;
+  --grid-line: rgba(255,255,255,.025);
+
+  --marquee-bg: #0D0D0D;
+  --marquee-text: #FAFF00;
+
+  --dark-card-bg: #0D0D0D;
+  --dark-card-text: #F0EDD8;
+  --dark-card-muted: #555555;
+  --dark-card-border: #2A2A2A;
+
+  --cta-bg: #252500;
+  --cta-text: #FAFF00;
+  --cta-text-muted: #A8A490;
+
+  --warn-bg: #2A0000;
+  --warn-border: #FF2A2A;
+  --warn-text: #FF6666;
+  --tip-bg: #2A2800;
+  --tip-text: #A8A490;
+
+  --input-bg: #252525;
+  --input-focus: #1E1B00;
+
+  --skeleton-a: #2A2A2A;
+  --skeleton-b: #333333;
+}
+
+/* ─────────────────────────────────────────
+   SPACING SCALE
+   Derived from measured component values.
+   Not a strict 4px grid — some values are
+   odd because the original uses them.
+   ───────────────────────────────────────── */
+:root {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+}
+
+/* ─────────────────────────────────────────
+   BORDER TOKENS
+   Source: style.css component rules
+   ───────────────────────────────────────── */
+:root {
+  --bd: 1px solid var(--border);
+  --bd-subtle: 1px solid var(--border-subtle);
+  --bd-thick: 2px solid var(--border);
+}
+
+/* ─────────────────────────────────────────
+   LAYOUT TOKENS
+   Source: style.css + index.html
+   ───────────────────────────────────────── */
+:root {
+  --container-max: 1380px;
+  --container-pad: 24px;
+  --container-pad-sm: 16px;
+}
+
+/* ─────────────────────────────────────────
+   TYPOGRAPHY SCALE
+   Measured from original component rules.
+   ───────────────────────────────────────── */
+:root {
+  /* Display / Hero */
+  --fs-hero: clamp(3rem, 8vw, 6.5rem);
+  --lh-hero: .88;
+  --ls-hero: -.06em;
+
+  /* Section headings */
+  --fs-section: clamp(2rem, 5vw, 4rem);
+  --ls-section: -.05em;
+
+  /* CTA heading (from index.html inline) */
+  --fs-cta: clamp(2.5rem, 6vw, 5rem);
+  --ls-cta: -.05em;
+
+  /* Component text sizes — measured from source */
+  --fs-nav-logo: .95rem;
+  --fs-nav-link: .75rem;
+  --fs-mob-link: clamp(1.4rem, 5vw, 2rem);
+  --fs-mob-close: .85rem;
+  --fs-marquee: .85rem;
+  --fs-btn: .88rem;
+  --fs-btn-sm: .68rem;
+  --fs-badge: .65rem;
+  --fs-stat-num: 2rem;
+  --fs-stat-label: .62rem;
+  --fs-stat-big: 3rem;
+  --fs-stat-lbl: .65rem;
+  --fs-search: .9rem;
+  --fs-filter-label: .68rem;
+  --fs-filter-option: .72rem;
+  --fs-sec-tag: .72rem;
+  --fs-section-tag: .7rem;
+  --fs-theme-toggle: .72rem;
+  --fs-reveal: .75rem;
+
+  /* Footer */
+  --fs-f-logo: 1.4rem;
+  --fs-f-desc: .78rem;
+  --fs-f-col-head: .68rem;
+  --fs-f-link: .78rem;
+  --fs-f-copy: .7rem;
+
+  /* Hero sub */
+  --fs-hero-sub: .95rem;
+  --lh-hero-sub: 1.75;
+
+  /* Status / terminal */
+  --fs-terminal: .82rem;
+  --fs-status-header: .72rem;
+  --fs-status-body: .78rem;
+  --fs-status-label: .68rem;
+
+  /* Why card */
+  --fs-why-title: .95rem;
+  --fs-why-desc: .72rem;
+
+  /* Category card */
+  --fs-cat-icon: 1.6rem;
+  --fs-cat-name: .72rem;
+  --fs-cat-count: .65rem;
+
+  /* Product card */
+  --fs-product-name: .92rem;
+  --fs-product-brand: .68rem;
+  --fs-product-price: .92rem;
+
+  /* Footer watermark */
+  --fs-watermark: 16vw;
+}
+
+/* ─────────────────────────────────────────
+   FONT WEIGHTS
+   Source: style.css component rules
+   ───────────────────────────────────────── */
+:root {
+  --fw-regular: 400;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+}
+
+/* ─────────────────────────────────────────
+   BORDER WIDTHS
+   Source: style.css component rules
+   ───────────────────────────────────────── */
+:root {
+  --bw-thin: 1px;
+  --bw-normal: 2px;
+  --bw-thick: 3px;
+  --bw-footer: 4px;
+}
+
+/* ─────────────────────────────────────────
+   BORDER RADII
+   Source: style.css — all components use 0px
+   except cursor (50%) and status dot (50%)
+   ───────────────────────────────────────── */
+:root {
+  --rad: 0px;
+  --rad-round: 50%;
+}
+
+/* ─────────────────────────────────────────
+   Z-INDEX SCALE
+   Source: style.css component rules
+   ───────────────────────────────────────── */
+:root {
+  --z-nav: 100;
+  --z-mob-nav: 90;
+  --z-dropdown: 999;
+  --z-modal: 1000;
+  --z-cursor: 2147483647;
+  --z-prog: 200;
+  --z-marquee: 2;
+}
+
+/* ─────────────────────────────────────────
+   ANIMATION DURATIONS
+   Source: style.css component rules
+   ───────────────────────────────────────── */
+:root {
+  --dur-fast: .12s;
+  --dur-normal: .25s;
+  --dur-slow: .55s;
+  --dur-hover: .1s;
+  --dur-slide: .3s;
+  --dur-marquee: 28s;
+}
+
+/* ─────────────────────────────────────────
+   COMPONENT MEASUREMENTS
+   Every padding, margin, gap, and size
+   measured from the original source.
+   ───────────────────────────────────────── */
+
+:root {
+  /* ── Navbar ── */
+  /* Source: style.css .navbar */
+  --nav-h: 68px;
+  --nav-pad-x: 24px;
+  --nav-gap: 12px;
+  /* Source: style.css .nav-logo */
+  --nav-logo-pad: 7px 16px;
+  --nav-logo-gap: 8px;
+  /* Source: style.css .nav-links */
+  --nav-links-pad: 5px;
+  --nav-links-gap: 2px;
+  /* Source: style.css .nav-links a */
+  --nav-link-pad: 5px 10px;
+  /* Source: style.css .nav-ham */
+  --nav-ham-pad: 8px 10px;
+  --nav-ham-gap: 4px;
+  --nav-ham-bar-w: 20px;
+  --nav-ham-bar-h: 2px;
+  --nav-ham-open-translate: 6px;
+  /* Source: style.css .nav-dropdown-btn */
+  --nav-profile-pad: 6px 10px;
+  /* Source: style.css .nav-dropdown-menu a */
+  --nav-dropdown-pad: 10px 16px;
+  /* Source: style.css #mob-close */
+  --mob-close-top: 16px;
+  --mob-close-right: 20px;
+  --mob-close-pad: 7px 16px;
+  /* Source: style.css #mob-nav a */
+  --mob-link-pad-bottom: 4px;
+  --mob-link-hover-pad-left: 12px;
+
+  /* ── Marquee ── */
+  /* Source: style.css .marquee-strip */
+  --marquee-pad-y: 10px;
+  /* Source: style.css .marquee-track span */
+  --marquee-item-pad: 0 22px;
+
+  /* ── Page body ── */
+  /* Source: style.css .page-body */
+  --page-body-pad-bottom: 80px;
+
+  /* ── Section header ── */
+  /* Source: style.css .sec-head */
+  --sec-head-pad-bottom: 12px;
+  --sec-head-margin-bottom: 2rem;
+  --sec-head-gap: 12px;
+  /* Source: style.css .sec-tag::before */
+  --sec-tag-dot: 8px;
+  --sec-tag-gap: 6px;
+
+  /* ── Buttons ── */
+  /* Source: style.css .btn-primary */
+  --btn-pad: 13px 28px;
+  --btn-gap: 8px;
+  /* Source: style.css .btn-sm */
+  --btn-sm-pad: 5px 12px;
+  /* Source: style.css .btn-visit */
+  --btn-visit-pad: 8px 16px;
+  --btn-visit-gap: 5px;
+  --btn-visit-shadow: 3px 3px 0 var(--shadow);
+
+  /* ── Hero (shared) ── */
+  /* Source: style.css .page-hero */
+  --hero-pad-top: calc(var(--nav-h) + 60px);
+  --hero-pad-x: 24px;
+  --hero-pad-bottom: 60px;
+  /* Source: style.css .page-hero-sub */
+  --hero-sub-pad: 14px 18px;
+  --hero-sub-rotate: .4deg;
+  --hero-sub-margin-bottom: 2rem;
+  /* Source: style.css .page-hero-title */
+  --hero-title-margin-bottom: 1.25rem;
+
+  /* ── Hero (homepage, from index.html) ── */
+  /* Source: index.html .hero-grid */
+  --hero-grid-col-right: 340px;
+  --hero-grid-gap: 60px;
+  --hero-grid-pad: 60px 0;
+  /* Source: index.html .hero-eyebrow */
+  --hero-eyebrow-gap: 10px;
+  --hero-eyebrow-pad: 7px 16px;
+  --hero-eyebrow-margin-bottom: 2rem;
+  /* Source: index.html .hero-title (homepage only) */
+  --hero-title-homepage: clamp(3.5rem, 9vw, 7.5rem);
+  --hero-lh-homepage: .85;
+  /* Source: index.html .hero-title .outline */
+  --hero-outline-stroke: 4px var(--text);
+  /* Source: index.html .hero-sub (homepage) */
+  --hero-sub-homepage-pad: 16px 20px;
+  --hero-sub-homepage-rotate: .5deg;
+  --hero-sub-homepage-max: 520px;
+  /* Source: index.html .hero-actions */
+  --hero-actions-gap: 12px;
+  --hero-actions-margin-bottom: 2.5rem;
+  /* Source: index.html .hero-stats */
+  --hero-stats-gap: 10px;
+
+  /* ── Terminal / Status panel ── */
+  /* Source: index.html .terminal */
+  --terminal-pad: 24px;
+  --terminal-lh: 2;
+  /* Source: index.html .terminal .t-bar */
+  --terminal-bar-gap: 6px;
+  --terminal-bar-margin-bottom: 16px;
+  --terminal-bar-pad-bottom: 14px;
+  /* Source: index.html .terminal .t-dot */
+  --terminal-dot: 10px;
+  /* Source: index.html .terminal .t-line */
+  --terminal-line-gap: 8px;
+
+  /* ── Stat box (shared) ── */
+  /* Source: style.css .stat-box */
+  --stat-box-pad: 16px 22px;
+  --stat-box-min-width: 100px;
+  /* Source: style.css .stat-label */
+  --stat-label-margin-top: 3px;
+
+  /* ── Stats row (homepage, from index.html) ── */
+  /* Source: index.html .stat-item */
+  --stat-item-pad: 36px 24px;
+  /* Source: index.html .stat-lbl */
+  --stat-lbl-margin-top: 6px;
+
+  /* ── Category grid ── */
+  /* Source: index.html .cat-preview-grid */
+  --cat-grid-gap: 10px;
+  /* Source: index.html .cat-prev-btn */
+  --cat-card-pad: 20px 12px;
+  --cat-card-gap: 8px;
+
+  /* ── Why card ── */
+  --why-card-pad: var(--sp-6) var(--sp-5);
+  --why-divider-w: 32px;
+
+  /* ── CTA ── */
+  /* Source: index.html .cta-wrap */
+  --cta-pad: 60px;
+  --cta-h2-margin-bottom: 1.5rem;
+  --cta-p-max-width: 460px;
+  --cta-p-margin-bottom: 2rem;
+  --cta-actions-gap: 12px;
+
+  /* ── Footer ── */
+  /* Source: style.css footer */
+  --footer-pad: 3.5rem 24px 2rem;
+  /* Source: style.css .footer-inner */
+  --footer-inner-gap: 2.5rem;
+  --footer-inner-margin-bottom: 2rem;
+  /* Source: style.css .f-logo */
+  --f-logo-margin-bottom: .75rem;
+  /* Source: style.css .f-col h4 */
+  --f-col-head-margin-bottom: .9rem;
+  --f-col-head-pad-bottom: 7px;
+  /* Source: style.css .f-col li */
+  --f-col-li-margin-bottom: .45rem;
+  /* Source: style.css .f-bottom */
+  --f-bottom-pad-top: 1.5rem;
+  --f-bottom-gap: 12px;
+
+  /* ── Search ── */
+  --search-max-width: 580px;
+  --search-pad: 14px 48px 14px 50px;
+  --search-pad-left: 50px;
+  --search-icon-left: 12px;
+
+  /* ── Filter sidebar ── */
+  --filter-sidebar-width: 256px; /* w-64 */
+
+  /* ── Badge ── */
+  --badge-pad: 3px 9px;
+
+  /* ── Theme toggle ── */
+  --toggle-pad: 8px 18px;
+  --toggle-gap: 8px;
+
+  /* ── Vote widget ── */
+  --vote-btn-size: 32px;
+  --vote-btn-gap: 2px;
+  --vote-count-min-width: 30px;
+
+  /* ── Reveal animation ── */
+  --reveal-translate: 28px;
+
+  /* ── Status panel (custom component) ── */
+  --status-header-pad: 8px 14px;
+  --status-body-pad: 12px 14px;
+  --status-dot: 6px;
+  --status-footer-pad: 8px 14px;
+}
+
+/* ─────────────────────────────────────────
+   GRID BACKGROUND
+   Source: style.css body lines 110-122
+   ───────────────────────────────────────── */
+:root {
+  --grid-dot-size: 1.2px;
+  --grid-dot-spacing: 36px;
+  --grid-line-spacing: 100px;
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE BREAKPOINTS
+   Source: style.css lines 634-646
+   + index.html lines 522-577
+   ───────────────────────────────────────── */
+:root {
+  --bp-desktop: 1100px;
+  --bp-tablet: 900px;
+  --bp-mobile: 860px;
+  --bp-small: 600px;
+  --bp-theme-toggle: 480px;
+}

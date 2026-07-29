@@ -1,0 +1,640 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id                    String         @id @default(cuid())
+  userId                String         @unique
+  username              String         @unique
+  displayName           String?
+  bio                   String?        @db.VarChar(200)
+  github                String?
+  discord               String?
+  reddit                String?
+  monkeytype            String?
+  website               String?
+  registrationComplete  Boolean        @default(false)
+  voteCredits           Int            @default(0)
+  voteRewardClaimed     Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  activityLog           ActivityLog[]
+  bansIssued            BanHistory[]   @relation("BannedBy")
+  bans                  BanHistory[]
+  collection            Collection[]
+  approvedContributions Contribution[] @relation("ApprovedContributions")
+  contributions         Contribution[]
+  assignedBadges        UserBadge[]    @relation("AssignedBadges")
+  userBadges            UserBadge[]
+  userXp                UserXP?
+  votes                 Vote[]
+  wishlist              Wishlist[]
+
+  @@index([username])
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  logo        String?
+  website     String?
+  country     String    @default("IN")
+  description String?
+  status      String    @default("active")
+  color       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([slug])
+}
+
+model Vendor {
+  id                     String          @id @default(cuid())
+  name                   String
+  slug                   String          @unique
+  logo                   String?
+  website                String
+  affiliateLink          String?
+  shippingPolicy         String?
+  chartColor             String?
+  enabled                Boolean         @default(true)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  scraperEnabled         Boolean         @default(false)
+  scraperEngine          String          @default("cheerio")
+  priceSelector          String?
+  availabilitySelector   String?
+  titleSelector          String?
+  imageSelector          String?
+  productExistsSelector  String?
+  priceAttribute         String          @default("text")
+  availabilityAttribute  String          @default("text")
+  titleAttribute         String          @default("text")
+  imageAttribute         String          @default("src")
+  customHeaders          String?
+  cloudflareProtected    Boolean         @default(false)
+  useJavaScriptRendering Boolean         @default(false)
+  customScraper          String?
+  scraperVersion         Int             @default(1)
+  scraperNotes           String?
+  scrapeLogs             ScrapeLog[]
+  vendorProducts         VendorProduct[]
+
+  @@index([slug])
+}
+
+model Product {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  brandId         String?
+  productType     String          @default("keyboards")
+  image           String?
+  imagePublicId   String?
+  description     String?
+  longDescription String?
+  sku             String?
+  tags            Json?
+  releaseDate     DateTime?
+  status          String          @default("active")
+  featured        Boolean         @default(false)
+  metaTitle       String?
+  metaDescription String?
+  ogImage         String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  collection      Collection[]
+  keyboardSpec    KeyboardSpec?
+  keycapSpec      KeycapSpec?
+  mouseSpec       MouseSpec?
+  brand           Brand?          @relation(fields: [brandId], references: [id])
+  images          ProductImage[]
+  switchSpec      SwitchSpec?
+  vendorProducts  VendorProduct[]
+  votes           Vote[]
+  wishlist        Wishlist[]
+
+  @@index([slug])
+  @@index([productType])
+  @@index([brandId])
+}
+
+model VendorProduct {
+  id                      String                @id @default(cuid())
+  vendorId                String
+  productId               String
+  vendorUrl               String
+  price                   Int                   @default(0)
+  availability            Availability          @default(IN_STOCK)
+  shippingCost            Int                   @default(0)
+  shippingIncluded        Boolean               @default(false)
+  totalPrice              Int                   @default(0)
+  effectivePrice          Int                   @default(0)
+  bestFinalPrice          Int                   @default(0)
+  stockStatus             String                @default("in_stock")
+  affiliateLink           String?
+  scrapeStatus            ScrapeStatus          @default(PENDING)
+  scrapeError             String?
+  lastCheckedAt           DateTime?
+  lastSuccessfulAt        DateTime?
+  lastScrapedPrice        Int?
+  lastScrapedAvailability Availability?
+  scraperVersion          String?
+  lastHttpStatus          Int?
+  responseTimeMs          Int?
+  manualOverride          Boolean               @default(false)
+  manualUpdatedAt         DateTime?
+  manualUpdatedById       String?
+  updatedBy               String?
+  source                  String                @default("manual")
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  priceHistory            PriceHistory[]
+  product                 Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vendor                  Vendor                @relation(fields: [vendorId], references: [id])
+  coupons                 VendorProductCoupon[]
+  variants                VendorVariant[]
+
+  @@unique([vendorId, productId])
+  @@index([productId])
+  @@index([vendorId])
+  @@index([totalPrice])
+  @@index([effectivePrice])
+  @@index([bestFinalPrice])
+  @@index([lastCheckedAt])
+  @@index([scrapeStatus])
+}
+
+model VendorVariant {
+  id              String        @id @default(cuid())
+  vendorProductId String
+  name            String
+  color           Json?
+  switches        Json?
+  keycaps         Json?
+  price           Int           @default(0)
+  availability    Availability  @default(IN_STOCK)
+  stockStatus     String        @default("in_stock")
+  variantUrl      String?
+  sku             String?
+  isDefault       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id], onDelete: Cascade)
+
+  @@index([vendorProductId])
+}
+
+model VendorProductCoupon {
+  id                 String        @id @default(cuid())
+  vendorProductId    String
+  code               String
+  discountType       String        @default("percentage")
+  discountValue      Int           @default(0)
+  minimumOrderAmount Int           @default(0)
+  expiryDate         DateTime?
+  couponUrl          String?
+  description        String?
+  enabled            Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  vendorProduct      VendorProduct @relation(fields: [vendorProductId], references: [id], onDelete: Cascade)
+
+  @@index([vendorProductId])
+}
+
+model PriceHistory {
+  id              String        @id @default(cuid())
+  vendorProductId String
+  price           Int           @default(0)
+  availability    Availability  @default(IN_STOCK)
+  shippingCost    Int           @default(0)
+  totalPrice      Int           @default(0)
+  source          PriceSource   @default(MANUAL)
+  recordedAt      DateTime      @default(now())
+  stockStatus     String        @default("in_stock")
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id], onDelete: Cascade)
+
+  @@index([vendorProductId])
+  @@index([recordedAt])
+  @@index([source])
+}
+
+model ScrapeLog {
+  id              String        @id @default(cuid())
+  vendorId        String
+  vendorProductId String?
+  status          ScrapeStatus
+  httpStatus      Int?
+  responseTimeMs  Int?
+  error           String?
+  price           Int?
+  availability    Availability?
+  selectorVersion String?
+  retryCount      Int           @default(0)
+  createdAt       DateTime      @default(now())
+  vendor          Vendor        @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@index([vendorProductId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  profileId String
+  productId String
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, productId])
+  @@index([productId])
+}
+
+model Banner {
+  id           String           @id @default(cuid())
+  title        String
+  status       String           @default("draft")
+  priority     Int              @default(0)
+  startDate    DateTime?
+  endDate      DateTime?
+  desktopImage String?
+  mobileImage  String?
+  linkType     String           @default("url")
+  linkUrl      String?
+  openNewTab   Boolean          @default(false)
+  displayRule  String           @default("both")
+  bannerType   String           @default("hero")
+  totalClicks  Int              @default(0)
+  totalViews   Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  locations    BannerLocation[]
+
+  @@index([status])
+  @@index([priority])
+}
+
+model BannerLocation {
+  id       String @id @default(cuid())
+  bannerId String
+  location String
+  banner   Banner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+
+  @@unique([bannerId, location])
+  @@index([location])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  profileId String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, productId])
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  profileId String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, productId])
+}
+
+model KeyboardSpec {
+  id                    String  @id @default(cuid())
+  productId             String  @unique
+  layout                String?
+  keyboardStyle         Json?
+  caseMaterial          String?
+  surfaceFinish         Json?
+  colors                Json?
+  weight                Int?
+  lengthMm              Int?
+  widthMm               Int?
+  heightMm              Int?
+  typingAngle           Int?
+  mountingStyle         Json?
+  plateMaterial         Json?
+  stabilizerCompat      Json?
+  stabilizerLayout      Json?
+  foamMaterial          Json?
+  foamPlacement         Json?
+  flexCuts              Boolean @default(false)
+  pcbType               Json?
+  pcbThickness          Float?
+  pollingRate           Int?
+  nkro                  Boolean @default(false)
+  batteryCapacity       Int?
+  connectivity          Json?
+  detachableCable       Boolean @default(false)
+  firmware              Json?
+  lighting              String?
+  ledOrientation        String?
+  perKeyRgb             Boolean @default(false)
+  switchesIncluded      Boolean @default(false)
+  factoryLubed          Boolean @default(false)
+  handLubed             Boolean @default(false)
+  factoryFilmed         Boolean @default(false)
+  breakInProgress       Boolean @default(false)
+  switchCompat          Json?
+  switchType            Json?
+  switchBrand           Json?
+  switchModel           Json?
+  switchOpForce         Float?
+  switchBottomOut       Float?
+  switchPreTravel       Float?
+  switchTotalTravel     Float?
+  switchSpringWeight    Float?
+  switchSpringLength    Float?
+  switchRatedLifetime   Int?
+  switchStemMaterial    String?
+  switchTopHousing      String?
+  switchBottomHousing   String?
+  switchSpringType      String?
+  switchLongPole        Boolean @default(false)
+  switchLedDiffuser     Boolean @default(false)
+  switchDustproofStem   Boolean @default(false)
+  switchLightPipe       Boolean @default(false)
+  keycapsIncluded       Boolean @default(false)
+  keycapMaterial        Json?
+  keycapProfile         String?
+  keycapLegendType      Json?
+  keycapLegendPlacement Json?
+  includedAccessories   Json?
+  additionalAccessories String?
+  specialFeatures       String?
+  product               Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  publicId  String?
+  alt       String?
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([sortOrder])
+}
+
+model SwitchSpec {
+  id                  String  @id @default(cuid())
+  productId           String  @unique
+  factoryLubed        Boolean @default(false)
+  handLubed           Boolean @default(false)
+  factoryFilmed       Boolean @default(false)
+  breakInProgress     Boolean @default(false)
+  switchCompat        Json?
+  switchType          Json?
+  switchBrand         Json?
+  switchModel         Json?
+  switchOpForce       Float?
+  switchBottomOut     Float?
+  switchPreTravel     Float?
+  switchTotalTravel   Float?
+  switchSpringWeight  Float?
+  switchSpringLength  Float?
+  switchRatedLifetime Int?
+  switchStemMaterial  String?
+  switchTopHousing    String?
+  switchBottomHousing String?
+  switchSpringType    String?
+  switchLongPole      Boolean @default(false)
+  switchLedDiffuser   Boolean @default(false)
+  switchDustproofStem Boolean @default(false)
+  switchLightPipe     Boolean @default(false)
+  quantityPerPack     Int?
+  packagingType       String?
+  product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model KeycapSpec {
+  id                    String  @id @default(cuid())
+  productId             String  @unique
+  keycapProfile         Json?
+  keycapLayoutSupport   Json?
+  keycapMaterial        Json?
+  keycapManufacturing   Json?
+  keycapLegends         Json?
+  keycapLegendPlacement Json?
+  keycapLanguage        Json?
+  keycapKeyCount        Json?
+  keycapStemCompat      Json?
+  keycapThickness       String?
+  keycapColorway        String?
+  keycapManufacturer    Json?
+  keycapDesigner        String?
+  keycapNovelties       Boolean @default(false)
+  keycapSpacebars       Boolean @default(false)
+  keycapAccentKeys      Boolean @default(false)
+  keycapArtisan         Boolean @default(false)
+  keycapNotes           String?
+  product               Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model MouseSpec {
+  id                    String  @id @default(cuid())
+  productId             String  @unique
+  mouseConnection       Json?
+  mouseSensor           String?
+  mouseDpi              Int?
+  mousePollingRate      Json?
+  mouseMaxIps           Int?
+  mouseMaxAccel         Int?
+  mouseLod              String?
+  mouseWeight           Float?
+  mouseShape            String?
+  mouseHandOrientation  String?
+  mouseSize             String?
+  mouseDimensionsLength Float?
+  mouseDimensionsWidth  Float?
+  mouseDimensionsHeight Float?
+  mouseSwitches         String?
+  mouseEncoder          String?
+  mouseButtons          Int?
+  mouseSideButtons      Int?
+  mouseScrollWheel      String?
+  mouseBattery          Int?
+  mouseBatteryLife      String?
+  mouseChargingPort     String?
+  mouseFeet             String?
+  mouseRgb              Boolean @default(false)
+  mouseSoftwareRequired Boolean @default(false)
+  mouseOnboardMemory    Boolean @default(false)
+  mouseShellMaterial    String?
+  mouseGripType         Json?
+  mouseColor            String?
+  mouseCompatibility    Json?
+  mouseAccessories      Json?
+  mouseAccessoriesOther String?
+  mouseWarranty         String?
+  product               Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model UserXP {
+  id        String   @id @default(cuid())
+  profileId String   @unique
+  xp        Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([xp])
+}
+
+model Contribution {
+  id           String             @id @default(cuid())
+  profileId    String
+  type         ContributionType
+  title        String
+  description  String?
+  xpAwarded    Int                @default(0)
+  approvedById String?
+  approvedAt   DateTime?
+  status       ContributionStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  approvedBy   Profile?           @relation("ApprovedContributions", fields: [approvedById], references: [id])
+  profile      Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  type        String      @default("community")
+  description String?
+  bgColor     String      @default("#FAFF00")
+  textColor   String      @default("#111111")
+  borderColor String      @default("#111111")
+  icon        String?
+  visible     Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  xpRequired  Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userBadges  UserBadge[]
+
+  @@index([slug])
+  @@index([sortOrder])
+}
+
+model UserBadge {
+  id           String   @id @default(cuid())
+  profileId    String
+  badgeId      String
+  assignedById String?
+  createdAt    DateTime @default(now())
+  assignedBy   Profile? @relation("AssignedBadges", fields: [assignedById], references: [id])
+  badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, badgeId])
+  @@index([profileId])
+  @@index([badgeId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  profileId String
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([createdAt])
+}
+
+model BanHistory {
+  id        String    @id @default(cuid())
+  profileId String
+  reason    String
+  type      String
+  status    BanStatus @default(ACTIVE)
+  adminId   String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  liftedAt  DateTime?
+  admin     Profile   @relation("BannedBy", fields: [adminId], references: [id])
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@index([type])
+}
+
+enum ScrapeStatus {
+  SUCCESS
+  FAILED
+  PENDING
+  MANUAL_OVERRIDE
+  NEEDS_REVIEW
+}
+
+enum Availability {
+  IN_STOCK
+  PREORDER
+  GROUP_BUY
+  COMING_SOON
+  OUT_OF_STOCK
+}
+
+enum PriceSource {
+  SCRAPER
+  MANUAL
+}
+
+enum ContributionType {
+  ADD_PRODUCT
+  UPDATE_PRICE
+  EDIT_SPECS
+  REPORT_VENDOR
+  UPLOAD_IMAGES
+  FIX_PRODUCT_INFO
+  ADD_VENDOR
+  ADD_BRAND
+  DOCUMENTATION
+  BUG_FIX
+  FEATURE_DEV
+  DB_CLEANUP
+  OTHER
+}
+
+enum ContributionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BanStatus {
+  ACTIVE
+  EXPIRED
+  LIFTED
+}

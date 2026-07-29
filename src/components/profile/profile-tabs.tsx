@@ -1,0 +1,290 @@
+'use client';
+
+/**
+ * Profile page tabs for collection, contributions, profile info, and
+ * activity. Renders tab navigation and conditionally displays product
+ * cards, contribution cards, user info, or vote history.
+ * Exports: ProfileTabs
+ */
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { removeFromCollection } from '@/lib/profile/actions';
+import { ProductCard } from '@/components/product/product-card';
+import ContributionCard from '@/components/profile/contribution-card';
+
+interface CollectionItem {
+  id: string;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    image: string | null;
+    brand: { name: string } | null;
+    productType: string;
+  };
+  createdAt: Date;
+}
+
+interface VoteItem {
+  id: string;
+  type: string;
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    image: string | null;
+    brand: { name: string } | null;
+    productType: string;
+  };
+  createdAt: Date;
+}
+
+interface ContributionItem {
+  id: string;
+  type: string;
+  title: string;
+  description: string | null;
+  xpAwarded: number;
+  status: string;
+  createdAt: string;
+  approvedBy: { username: string } | null;
+}
+
+interface ProfileTabsProps {
+  activeTab: string;
+  profileUsername: string;
+  isOwner: boolean;
+  collection: CollectionItem[];
+  votes: VoteItem[];
+  voteCredits: number;
+  memberSince: number;
+  rank: string;
+  reputation: number;
+  communityRole: string;
+  profile: {
+    id: string;
+    displayName: string | null;
+    bio: string | null;
+    github: string | null;
+    discord: string | null;
+    reddit: string | null;
+    monkeytype: string | null;
+    website: string | null;
+  };
+  contributions?: ContributionItem[];
+}
+
+const TABS = [
+  { id: 'collection', label: 'COLLECTION' },
+  { id: 'contributions', label: 'CONTRIBUTIONS' },
+  { id: 'profile', label: 'PROFILE' },
+  { id: 'activity', label: 'ACTIVITY' },
+] as const;
+
+export function ProfileTabs({
+  activeTab,
+  profileUsername,
+  isOwner,
+  collection,
+  votes,
+  voteCredits,
+  memberSince,
+  rank,
+  reputation,
+  communityRole,
+  profile,
+  contributions,
+}: ProfileTabsProps) {
+  const router = useRouter();
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  const current = TABS.find((t) => t.id === activeTab)?.id || 'collection';
+
+  function switchTab(id: string) {
+    router.push(`/profile/${profileUsername}?tab=${id}`);
+  }
+
+  async function handleRemove(id: string) {
+    setRemoving(id);
+    await removeFromCollection(id);
+    router.refresh();
+  }
+
+  return (
+    <div className="profile-tabs">
+      <div className="profile-tab-bar">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`profile-tab ${current === t.id ? 'active' : ''}`}
+            onClick={() => switchTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="profile-tab-content">
+        {/* ═══ PROFILE TAB ═══ */}
+        {current === 'profile' && (
+          <div className="profile-info-grid">
+            <div className="profile-info-card">
+              <div className="profile-info-card-header">ABOUT</div>
+              <div className="profile-info-card-body">
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Username</span>
+                  <span className="profile-info-value">{profileUsername}</span>
+                </div>
+                {profile.displayName && (
+                  <div className="profile-info-row">
+                    <span className="profile-info-label">Display Name</span>
+                    <span className="profile-info-value">{profile.displayName}</span>
+                  </div>
+                )}
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Member Since</span>
+                  <span className="profile-info-value">{memberSince}</span>
+                </div>
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Role</span>
+                  <span className="profile-info-value">{communityRole}</span>
+                </div>
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Rank</span>
+                  <span className="profile-info-value">{rank}</span>
+                </div>
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Reputation</span>
+                  <span className="profile-info-value">{reputation} XP</span>
+                </div>
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Vote Credits</span>
+                  <span className="profile-info-value">{voteCredits}</span>
+                </div>
+                <div className="profile-info-row">
+                  <span className="profile-info-label">Collection</span>
+                  <span className="profile-info-value">{collection.length} items</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ COLLECTION TAB ═══ */}
+        {current === 'collection' && (
+          <>
+            {collection.length === 0 ? (
+              <div className="profile-empty">
+                <div className="profile-empty-icon">{'\u25a3'}</div>
+                <p className="profile-empty-text">No products in your collection yet.</p>
+                <p className="profile-empty-sub">
+                  Browse our catalogue and add keyboards, switches, keycaps, and mice to your collection.
+                </p>
+                <div className="profile-empty-links">
+                  <Link href="/keyboards">Keyboards</Link>
+                  <Link href="/switches">Switches</Link>
+                  <Link href="/keycaps">Keycaps</Link>
+                  <Link href="/mouse">Mouse</Link>
+                </div>
+              </div>
+            ) : (
+              <div className="profile-grid">
+                {collection.map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    product={{
+                      ...item.product,
+                      lowestPrice: null,
+                      originalPrice: null,
+                      hasCoupons: false,
+                      vendorCount: 0,
+                      upvotes: 0,
+                      downvotes: 0,
+                      approval: null,
+                      userVote: null,
+                    }}
+                    variant="profile"
+                    brand={item.product.brand?.name ?? undefined}
+                    onRemove={isOwner ? handleRemove : undefined}
+                    removing={removing === item.id}
+                    collectionItemId={item.id}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ═══ CONTRIBUTIONS TAB ═══ */}
+        {current === 'contributions' && (
+          contributions && contributions.length > 0 ? (
+            <div className="card-contribution-list">
+              {contributions.map((c) => (
+                <ContributionCard
+                  key={c.id}
+                  id={c.id}
+                  type={c.type}
+                  title={c.title}
+                  description={c.description}
+                  xpAwarded={c.xpAwarded}
+                  status={c.status}
+                  createdAt={c.createdAt}
+                  approvedBy={c.approvedBy?.username || null}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="profile-empty">
+              <div className="profile-empty-icon">{'\u2b50'}</div>
+              <p className="profile-empty-text">No contributions yet.</p>
+              <p className="profile-empty-sub">
+                Help improve KeyDir by adding products, updating prices, or editing specs.
+              </p>
+              <div className="profile-empty-links">
+                <Link href="/keyboards">Browse Keyboards</Link>
+                <Link href="/switches">Browse Switches</Link>
+                <Link href="/mouse">Browse Mice</Link>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* ═══ ACTIVITY TAB ═══ */}
+        {current === 'activity' && (
+          <>
+            {votes.length === 0 ? (
+              <div className="profile-empty">
+                <div className="profile-empty-icon">{'\u25b2'}</div>
+                <p className="profile-empty-text">No activity yet.</p>
+                <p className="profile-empty-sub">
+                  Upvote or downvote products to see your voting history here.
+                </p>
+              </div>
+            ) : (
+              <div className="profile-activity">
+                {votes.map((vote) => (
+                  <div key={vote.id} className="profile-activity-item">
+                    <span className={`profile-activity-icon ${vote.type === 'upvote' ? 'up' : 'down'}`}>
+                      {vote.type === 'upvote' ? '\u25b2' : '\u25bc'}
+                    </span>
+                    <div className="profile-activity-info">
+                      <Link href={`/products/${vote.product.slug}`} className="profile-activity-link">
+                        {vote.product.brand?.name ? `${vote.product.brand.name} ` : ''}
+                        {vote.product.name}
+                      </Link>
+                      <span className="profile-activity-action">
+                        {vote.type === 'upvote' ? 'Upvoted' : 'Downvoted'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
