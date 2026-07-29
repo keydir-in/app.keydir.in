@@ -142,3 +142,7 @@ public/uploads/
 *.orig
 tsconfig.tsbuildinfo
 .aider*
+# ==========================================
+# OpenCode
+# ==========================================
+.opencode/
