@@ -51,7 +51,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const { edit, tab } = await searchParams;
 
-  let profile = await getProfileByUsername(username);
+  const [profileResult] = await Promise.all([
+    getProfileByUsername(username),
+    getCurrentUser(),
+  ]);
+  let profile = profileResult;
 
   if (!profile) {
     const loggedIn = await isAuthenticated();
@@ -68,21 +72,21 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const currentUser = await getCurrentUser();
   const isOwner = currentUser?.userId === profile.userId;
 
-  const votes = await prisma.vote.findMany({
-    where: { profileId: profile.id },
-    select: { id: true, type: true, createdAt: true, product: { select: { id: true, name: true, slug: true, image: true, brand: { select: { name: true } }, vendorProducts: { select: { effectivePrice: true }, orderBy: { effectivePrice: 'asc' }, take: 1 } } } },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const contributions = await prisma.contribution.findMany({
-    where: { profileId: profile.id, status: 'APPROVED' },
-    orderBy: { createdAt: 'desc' },
-    include: { approvedBy: { select: { username: true } } },
-  });
-
-  const [userXpRecord, userBadgesResult] = await Promise.all([
-    prisma.userXP.findUnique({ where: { profileId: profile.id } }),
-    getUserBadges(profile.id),
+  const [votes, contributions, [userXpRecord, userBadgesResult]] = await Promise.all([
+    prisma.vote.findMany({
+      where: { profileId: profile.id },
+      select: { id: true, type: true, createdAt: true, product: { select: { id: true, name: true, slug: true, image: true, brand: { select: { name: true } }, vendorProducts: { select: { effectivePrice: true }, orderBy: { effectivePrice: 'asc' }, take: 1 } } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.contribution.findMany({
+      where: { profileId: profile.id, status: 'APPROVED' },
+      orderBy: { createdAt: 'desc' },
+      include: { approvedBy: { select: { username: true } } },
+    }),
+    Promise.all([
+      prisma.userXP.findUnique({ where: { profileId: profile.id } }),
+      getUserBadges(profile.id),
+    ]),
   ]);
   const xp = userXpRecord?.xp || 0;
   const rank = getRank(xp);

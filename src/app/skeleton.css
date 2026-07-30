@@ -123,7 +123,7 @@
 /* Hero skeleton */
 .hero-grid {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   gap: 60px;
   align-items: center;
 }

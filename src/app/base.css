@@ -99,7 +99,9 @@ body {
   line-height: 1;
 }
 
-.sec-head h2 em { font-style: normal; }
+.sec-head h1 em,
+.sec-head h2 em,
+.page-hero-title span:not(.outline) { font-style: normal; -webkit-text-stroke: 1px var(--border); }
 
 .sec-tag {
   font-family: var(--f-m);

@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-
 
 import { isInternalRoute } from './utils';
 
@@ -261,7 +261,7 @@ export async function unlinkProvider(provider: string) {
   redirect('/settings?message=' + encodeURIComponent(`${provider} unlinked`));
 }
 
-export async function getConnectedAccounts() {
+async function _getConnectedAccounts() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -338,6 +338,7 @@ export async function getConnectedAccounts() {
     voteRewardClaimed,
   };
 }
+export const getConnectedAccounts = cache(_getConnectedAccounts);
 
 export async function enableEmailLogin(formData: FormData) {
   const supabase = await createClient();

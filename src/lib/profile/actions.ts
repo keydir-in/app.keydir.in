@@ -49,7 +49,7 @@ export async function ensureProfile() {
   return profile;
 }
 
-export async function getProfileByUsername(username: string) {
+async function _getProfileByUsername(username: string) {
   return prisma.profile.findUnique({
     where: { username },
     include: {
@@ -87,6 +87,8 @@ export async function getProfileByUsername(username: string) {
     },
   });
 }
+
+export const getProfileByUsername = cache(_getProfileByUsername);
 
 export async function getCurrentUser() {
   const { profile } = await getCurrentUserAndProfile();

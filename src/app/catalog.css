@@ -4413,7 +4413,7 @@
    ══════════════════════════════════════════ */
 .hero-grid {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   align-items: center;
   gap: 60px;
   padding: 60px 0;
