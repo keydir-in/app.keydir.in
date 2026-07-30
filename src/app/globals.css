@@ -61,13 +61,6 @@
 [data-theme="dark"] .why-card:hover { background: var(--surface-raised); }
 [data-theme="dark"] .why-desc { color: var(--text-muted); }
 
-/* ── Section headings ── */
-[data-theme="dark"] .sec-head h1 em,
-[data-theme="dark"] .sec-head h2 em,
-[data-theme="dark"] .lp-header-text h2 em,
-[data-theme="dark"] .dash-page-title em,
-[data-theme="dark"] .page-hero-title span:not(.outline) { -webkit-text-stroke: 0; }
-
 /* ── Stats row ── */
 [data-theme="dark"] .stat-box { background: var(--surface); border-color: var(--border); color: var(--text); }
 [data-theme="dark"] .stat-box.alt-dark { background: var(--dark-card-bg); color: var(--dark-card-text); }

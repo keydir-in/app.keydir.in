@@ -49,25 +49,10 @@ export async function ensureProfile() {
   return profile;
 }
 
-async function _getProfileByUsername(username: string) {
+export async function getProfileByUsername(username: string) {
   return prisma.profile.findUnique({
     where: { username },
     include: {
-      wishlist: {
-        include: {
-          product: {
-            include: {
-              brand: { select: { name: true } },
-              vendorProducts: {
-                select: { effectivePrice: true },
-                orderBy: { effectivePrice: 'asc' },
-                take: 1,
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      },
       collection: {
         include: {
           product: {
@@ -87,8 +72,6 @@ async function _getProfileByUsername(username: string) {
     },
   });
 }
-
-export const getProfileByUsername = cache(_getProfileByUsername);
 
 export async function getCurrentUser() {
   const { profile } = await getCurrentUserAndProfile();

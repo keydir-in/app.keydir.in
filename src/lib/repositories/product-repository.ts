@@ -139,7 +139,7 @@ const PRODUCT_DETAIL_INCLUDE = {
       vendor: { select: { id: true, name: true, slug: true, logo: true, chartColor: true, enabled: true, scraperEnabled: true, affiliateLink: true } },
       variants: { orderBy: { createdAt: 'asc' as const } },
       coupons: { orderBy: { createdAt: 'asc' as const } },
-      priceHistory: { orderBy: { recordedAt: 'asc' as const }, take: 180 },
+      priceHistory: { orderBy: { recordedAt: 'asc' as const }, take: 60 },
     },
     where: { vendor: { enabled: true } },
     orderBy: { effectivePrice: 'asc' as const },

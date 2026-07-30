@@ -1,3 +1,10 @@
+/**
+ * Admin authentication helper.
+ * Verifies the current Supabase user's email against ADMIN_EMAILS env var.
+ * Returns the user's profile if authorized, null otherwise.
+ * Wrapped in React.cache() for per-request deduplication.
+ */
+
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';

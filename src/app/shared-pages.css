@@ -2373,7 +2373,6 @@
 .lp-header-text h2 em {
   font-style: normal;
   color: var(--yellow);
-  -webkit-text-stroke: 1px var(--border);
 }
 
 .lp-header-text p {

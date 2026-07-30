@@ -121,6 +121,9 @@ export async function syncCommunityMember(profileId: string) {
 }
 
 export async function assignCommunityBadge(profileId: string, badgeId: string) {
+  const admin = await requireAdmin();
+  if (!admin) return { error: 'not_authorized' as const };
+
   await prisma.userBadge.deleteMany({
     where: { profileId, badge: { type: 'community' } },
   });
@@ -150,7 +153,6 @@ export async function getProfileRank(profileId: string) {
 
 export async function getUserBadges(profileId: string) {
   await ensureSystemBadges();
-  await syncRankBadge(profileId);
 
   const userBadges = await prisma.userBadge.findMany({
     where: { profileId },
@@ -367,6 +369,9 @@ export async function deleteContribution(contributionId: string) {
 }
 
 export async function getPendingContributions() {
+  const admin = await requireAdmin();
+  if (!admin) return [];
+
   return prisma.contribution.findMany({
     where: { status: 'PENDING' },
     include: { profile: { select: { username: true, displayName: true } } },

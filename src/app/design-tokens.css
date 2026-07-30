@@ -399,7 +399,7 @@
 
   /* ── Hero (homepage, from index.html) ── */
   /* Source: index.html .hero-grid */
-  --hero-grid-col-right: 380px;
+  --hero-grid-col-right: 340px;
   --hero-grid-gap: 60px;
   --hero-grid-pad: 60px 0;
   /* Source: index.html .hero-eyebrow */
