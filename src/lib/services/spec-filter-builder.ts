@@ -87,11 +87,6 @@ export type SortOption = 'lowest' | 'highest' | 'newest' | 'popular' | 'vendors'
 
 export function buildOrderBy(sort: SortOption): Prisma.ProductOrderByWithRelationInput {
   switch (sort) {
-    case 'lowest':
-    case 'drops':
-      return { vendorProducts: { _count: 'asc' } };
-    case 'highest':
-      return { vendorProducts: { _count: 'desc' } };
     case 'newest':
       return { createdAt: 'desc' };
     case 'popular':

@@ -11,6 +11,7 @@ import {
   getUserVotes,
   findBestDeals,
   findTrendingProducts,
+  findProductCardsSortedByPrice,
   type ProductWithRelations,
 } from '@/lib/repositories/product-repository';
 import {
@@ -116,12 +117,12 @@ export async function fetchProductListings(
   const brands = searchParams.getAll('brand');
 
   const where = buildProductWhere(productType, searchParams, specConfig, { brands });
-  const orderBy = buildOrderBy(sort);
 
-  const [products, total] = await Promise.all([
-    findProductCards(where, orderBy, pageSize, skip),
-    countProducts(where),
-  ]);
+  const products = sort === 'lowest' || sort === 'highest'
+    ? await findProductCardsSortedByPrice(where, sort, pageSize, skip)
+    : await findProductCards(where, buildOrderBy(sort), pageSize, skip);
+
+  const total = await countProducts(where);
 
   let userVotes: Record<string, string> = {};
   if (options?.includeUserVotes !== false) {

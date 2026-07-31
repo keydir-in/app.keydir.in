@@ -45,6 +45,41 @@ export async function countProducts(where: Prisma.ProductWhereInput): Promise<nu
   return prisma.product.count({ where });
 }
 
+// ponytail: min/max price ordering pulled into JS because Prisma's orderBy only
+// supports _count on to-many relations. Fetches all matching ids + min price per
+// request; switch to raw SQL ordering if a category ever exceeds ~5k products.
+export async function findProductCardsSortedByPrice(
+  where: Prisma.ProductWhereInput,
+  sort: 'lowest' | 'highest',
+  take: number,
+  skip: number,
+): Promise<ProductWithRelations[]> {
+  const matches = await prisma.product.findMany({
+    where,
+    select: {
+      id: true,
+      vendorProducts: { select: { effectivePrice: true }, orderBy: { effectivePrice: 'asc' }, take: 1 },
+    },
+  });
+
+  const dir = sort === 'lowest' ? 1 : -1;
+  matches.sort((a, b) => {
+    const pa = a.vendorProducts[0]?.effectivePrice ?? null;
+    const pb = b.vendorProducts[0]?.effectivePrice ?? null;
+    if (pa == null && pb == null) return 0;
+    if (pa == null) return 1;
+    if (pb == null) return -1;
+    return (pa - pb) * dir;
+  });
+
+  const pageIds = matches.slice(skip, skip + take).map((m) => m.id);
+  if (pageIds.length === 0) return [];
+
+  const products = await findProductCards({ id: { in: pageIds } }, {}, pageIds.length, 0);
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return pageIds.map((id) => byId.get(id)).filter((p): p is ProductWithRelations => !!p);
+}
+
 export async function getUserVotes(
   profileId: string,
   productIds: string[],
