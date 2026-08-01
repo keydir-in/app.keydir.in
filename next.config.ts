@@ -11,7 +11,7 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "https://vercel-scripts.com",
   ].join(" "),
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: res.cloudinary.com https://*.githubusercontent.com",
+  "img-src 'self' data: blob: res.cloudinary.com https://*.githubusercontent.com https://*.googleusercontent.com https://cdn.discordapp.com https://media.discordapp.net",
   "font-src 'self'",
   [
     "connect-src 'self'",

@@ -65,6 +65,7 @@ export function Navbar() {
   const [compareCategory, setCompareCategory] = useState<string | null>(null);
   const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
@@ -93,6 +94,7 @@ export function Navbar() {
           displayName: data.displayName,
           email: data.email,
         });
+        setAvatarFailed(false);
       }
     });
   }, []);
@@ -218,7 +220,7 @@ export function Navbar() {
                 className="nav-profile-btn"
                 onClick={() => setProfileOpen(!profileOpen)}
               >
-                {user.avatarUrl ? (
+                {user.avatarUrl && !avatarFailed ? (
                   <Image
                     src={user.avatarUrl}
                     alt=""
@@ -226,6 +228,7 @@ export function Navbar() {
                     height={20}
                     unoptimized
                     style={{ borderRadius: '50%', objectFit: 'cover' }}
+                    onError={() => setAvatarFailed(true)}
                   />
                 ) : null}
                 <span>{user.displayName || user.username}</span>
@@ -283,8 +286,8 @@ export function Navbar() {
           {user ? (
             <Link href={`/profile/${user.username}`} className="mob-drawer-user" onClick={closeMobile}>
               <div className="mob-drawer-avatar">
-                {user.avatarUrl ? (
-                  <Image src={user.avatarUrl} alt="" width={36} height={36} unoptimized style={{ borderRadius: '50%', objectFit: 'cover' }} />
+                {user.avatarUrl && !avatarFailed ? (
+                  <Image src={user.avatarUrl} alt="" width={36} height={36} unoptimized style={{ borderRadius: '50%', objectFit: 'cover' }} onError={() => setAvatarFailed(true)} />
                 ) : (
                   <div className="mob-drawer-avatar-fallback">{(user.displayName || user.username).charAt(0).toUpperCase()}</div>
                 )}

@@ -520,6 +520,25 @@ export interface CurrentUser {
   isAdmin: boolean;
 }
 
+function resolveAvatarUrl(user: {
+  user_metadata?: Record<string, unknown> | null;
+  identities?: Array<{ provider: string; id: string; identity_data?: Record<string, unknown> | null }> | null;
+}): string | null {
+  const meta = user.user_metadata ?? {};
+  const direct = (meta.avatar_url as string) || (meta.picture as string);
+  if (direct) return direct;
+
+  for (const identity of user.identities ?? []) {
+    const data = identity.identity_data ?? {};
+    const fromData = (data.avatar_url as string) || (data.picture as string);
+    if (fromData) return fromData;
+    if (identity.provider === 'discord' && typeof data.avatar === 'string' && identity.id) {
+      return `https://cdn.discordapp.com/avatars/${identity.id}/${data.avatar}.png`;
+    }
+  }
+  return null;
+}
+
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -536,7 +555,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     id: user.id,
     email: user.email ?? null,
     username,
-    avatarUrl: user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
+    avatarUrl: resolveAvatarUrl(user),
     displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
     isAdmin: adminEmails.includes(email.toLowerCase()),
   };
