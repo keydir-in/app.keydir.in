@@ -1720,21 +1720,59 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.vendor-card-variants-header {
+.vendor-card-variants-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
   font-family: var(--f-m);
   font-size: var(--fs-badge);
   font-weight: var(--fw-bold);
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: .04em;
-  margin-bottom: var(--sp-2);
+  text-align: left;
+}
+
+.vendor-card-variants-toggle:hover,
+.vendor-card-variants-toggle:focus-visible {
+  color: var(--text);
+}
+
+.vendor-card-variants-toggle-count {
+  color: var(--text);
+}
+
+.vendor-card-variants-toggle-arrow {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.vendor-card-variants-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .25s ease;
+}
+
+.vendor-card-variants-body.open {
+  grid-template-rows: 1fr;
+}
+
+.vendor-card-variants-inner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 .vendor-card-variant {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sp-2) 0;
+  padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--border-subtle);
   gap: var(--sp-3);
 }
@@ -1744,43 +1782,51 @@
 .vendor-card-variant-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .vendor-card-variant-name {
+  font-family: var(--f-d);
+  font-size: .8rem;
+  font-weight: var(--fw-extrabold);
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.vendor-card-variant-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vendor-card-variant-field {
+  display: flex;
+  gap: 8px;
+  font-size: .68rem;
+  line-height: 1.45;
+}
+
+.vendor-card-variant-field-label {
   font-family: var(--f-m);
-  font-size: .78rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  min-width: 92px;
+  flex-shrink: 0;
+}
+
+.vendor-card-variant-field-value {
+  font-family: var(--f-d);
   font-weight: var(--fw-bold);
   color: var(--text);
 }
 
-.vendor-card-variant-tags {
+.vendor-card-variant-action {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.vendor-card-tag {
-  font-family: var(--f-m);
-  font-size: .58rem;
-  font-weight: var(--fw-bold);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  padding: 1px 6px;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-dim);
-}
-
-.vendor-card-tag.tag-switch {
-  border-color: var(--yellow);
-  color: var(--yellow);
-}
-
-.vendor-card-variant-right {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -1789,6 +1835,21 @@
   font-size: .82rem;
   font-weight: var(--fw-extrabold);
   color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .vendor-card-variant {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vendor-card-variant-action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: var(--sp-1);
+  }
 }
 
 .badge-sm {

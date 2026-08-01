@@ -37,11 +37,13 @@ export const Footer = memo(function Footer() {
         </div>
 
         <div className="f-col">
-          <h4>Legal</h4>
+          <h4>Documentation</h4>
           <ul>
-            <li><a href="https://keydir.in/terms-and-conditions/" rel="noopener noreferrer">_Terms &amp; Conditions</a></li>
-             <li><a href="https://keydir.in/privacy-policy/" rel="noopener noreferrer">_Privacy Policy</a></li>
-             <li><a href="https://keydir.in/disclaimer/" rel="noopener noreferrer">_Disclaimer</a></li>
+            <li><a href="https://keydir.in/app/terms" rel="noopener noreferrer">_Terms</a></li>
+             <li><a href="https://keydir.in/app/privacy" rel="noopener noreferrer">_Privacy Policy</a></li>
+             <li><a href="https://keydir.in/app/cookies" rel="noopener noreferrer">_Cookies</a></li>
+             <li><a href="https://keydir.in/app/security" rel="noopener noreferrer">_Security</a></li>
+             <li><a href="https://keydir.in/app/dmca" rel="noopener noreferrer">_DMCA</a></li>
           </ul>
         </div>
       </div>

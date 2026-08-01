@@ -3,7 +3,7 @@
 /**
  * Vendor pricing card displaying price, shipping, availability, and
  * coupon details for a single vendor. Shows expandable coupon list,
- * variant options, and a buy link with last-updated timestamp.
+ * collapsible variant options, and a buy link with last-updated timestamp.
  */
 
 import { useState } from 'react';
@@ -19,6 +19,8 @@ interface VendorCardProps {
 
 export function VendorCard({ vendorProduct: vp, isLowest = false }: VendorCardProps) {
   const [showAllCoupons, setShowAllCoupons] = useState(false);
+  const [variantsRendered, setVariantsRendered] = useState(false);
+  const [variantsOpen, setVariantsOpen] = useState(false);
   const availability = vp.availability || vp.stockStatus || 'in_stock';
   const link = vp.vendor.affiliateLink || vp.vendorUrl;
   const shipping = vp.shippingIncluded
@@ -38,6 +40,28 @@ export function VendorCard({ vendorProduct: vp, isLowest = false }: VendorCardPr
     if (!c) return null;
     return formatCouponDiscount(c);
   };
+
+  const toggleVariants = () => {
+    if (variantsOpen) {
+      setVariantsOpen(false);
+    } else {
+      if (!variantsRendered) {
+        setVariantsRendered(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => setVariantsOpen(true)));
+      } else {
+        setVariantsOpen(true);
+      }
+    }
+  };
+
+  const variantFields = (v: NonNullable<VendorProductWithVendor['variants']>[number]) =>
+    [
+      { label: 'Base Color', value: v.color?.join(', ') },
+      { label: 'Switch', value: v.switches?.join(', ') },
+      { label: 'Keycaps', value: v.keycaps?.join(', ') },
+    ].filter((f): f is { label: string; value: string } => !!f.value && f.value.trim().length > 0);
+
+  const variantsPanelId = `vendor-variants-${vp.id}`;
 
   return (
     <div className={`vendor-card ${isLowest ? 'vendor-card-lowest' : ''}`}>
@@ -100,26 +124,46 @@ export function VendorCard({ vendorProduct: vp, isLowest = false }: VendorCardPr
 
       {hasVariants && (
         <div className="vendor-card-variants">
-          <div className="vendor-card-variants-header">Variants ({variants.length})</div>
-          {variants.map((v) => {
-            const vLink = v.variantUrl || link;
-            return (
-              <div key={v.id} className="vendor-card-variant">
-                <div className="vendor-card-variant-info">
-                  <span className="vendor-card-variant-name">{v.name || 'Unnamed'}</span>
-                  <div className="vendor-card-variant-tags">
-                    {v.color?.map((c) => <span key={c} className="vendor-card-tag">{c}</span>)}
-                    {v.switches?.map((s) => <span key={s} className="vendor-card-tag tag-switch">{s}</span>)}
+          <button
+            type="button"
+            className="vendor-card-variants-toggle"
+            aria-expanded={variantsOpen}
+            aria-controls={variantsPanelId}
+            onClick={toggleVariants}
+          >
+            <span className="vendor-card-variants-toggle-count">Variants ({variants.length})</span>
+            <span className="vendor-card-variants-toggle-arrow">
+              {variantsOpen ? '▲ Hide variants' : '▼ Show variants'}
+            </span>
+          </button>
+          <div
+            id={variantsPanelId}
+            className={`vendor-card-variants-body ${variantsOpen ? 'open' : ''}`}
+          >
+            <div className="vendor-card-variants-inner">
+              {variantsRendered && variants.map((v) => {
+                const vLink = v.variantUrl || link;
+                return (
+                  <div key={v.id} className="vendor-card-variant">
+                    <div className="vendor-card-variant-info">
+                      <div className="vendor-card-variant-name">{v.name || 'Unnamed'}</div>
+                      {variantFields(v).map((f) => (
+                        <div key={f.label} className="vendor-card-variant-field">
+                          <span className="vendor-card-variant-field-label">{f.label}</span>
+                          <span className="vendor-card-variant-field-value">{f.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="vendor-card-variant-action">
+                      <span className="vendor-card-variant-price">{formatPrice(toNum(v.price))}</span>
+                      <AvailabilityBadge availability={v.stockStatus} size="sm" />
+                      <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
+                    </div>
                   </div>
-                </div>
-                <div className="vendor-card-variant-right">
-                  <span className="vendor-card-variant-price">{formatPrice(toNum(v.price))}</span>
-                  <AvailabilityBadge availability={v.stockStatus} size="sm" />
-                  <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
       <div className="vendor-card-row vendor-card-footer">
