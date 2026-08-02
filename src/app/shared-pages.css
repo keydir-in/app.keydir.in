@@ -519,7 +519,6 @@
   .spec-row { flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
   .spec-value { text-align: left; }
   .spec-colors { justify-content: flex-start; }
-  .vendor-card-row { flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
   .price-chart-svg { height: 220px; }
   .price-chart-range-btn { padding: var(--sp-2) var(--sp-3); font-size: 0.6rem; }
   .product-hero-collection { grid-template-columns: 1fr; }

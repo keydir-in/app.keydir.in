@@ -114,7 +114,8 @@ export function formatDate(d: Date): string {
 
 export function formatCouponDiscount(coupon: { discountType: string; discountValue: number }): string {
   if (coupon.discountType === 'percentage') return `${coupon.discountValue}% OFF`;
-  if (coupon.discountType === 'flat') return `${formatPrice(coupon.discountValue)} OFF`;
+  if (coupon.discountType === 'fixed' || coupon.discountType === 'flat') return `${formatPrice(coupon.discountValue)} OFF`;
+  if (coupon.discountType === 'shipping' || coupon.discountType === 'free_shipping') return 'FREE SHIPPING';
   return 'FREE SHIPPING';
 }
 

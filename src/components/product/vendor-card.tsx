@@ -2,25 +2,59 @@
 
 /**
  * Vendor pricing card displaying price, shipping, availability, and
- * coupon details for a single vendor. Shows expandable coupon list,
- * collapsible variant options, and a buy link with last-updated timestamp.
+ * coupon details for a single vendor. Shows the vendor's highest-priority
+ * active coupon, product coupons, variant options, savings for the
+ * cheapest vendor, and a buy CTA.
  */
 
 import { useState } from 'react';
-import { formatPrice, timeAgo, toNum, formatCouponDiscount, getBestCoupon } from '@/lib/utils';
-import { ExternalLink } from 'lucide-react';
+import { formatPrice, toNum, formatCouponDiscount, getBestCoupon, timeAgo } from '@/lib/utils';
+import { isCouponActive, sortCouponsByPriority } from '@/lib/services/coupon-utils';
 import { AvailabilityBadge } from '@/components/shared/availability-badge';
 import type { VendorProductWithVendor } from '@/types';
 
 interface VendorCardProps {
   vendorProduct: VendorProductWithVendor;
-  isLowest?: boolean;
 }
 
-export function VendorCard({ vendorProduct: vp, isLowest = false }: VendorCardProps) {
+function variantFields(v: { color: string[] | null; switches: string[] | null; keycaps: string[] | null }) {
+  const fields: { label: string; values: string[] }[] = [];
+  if (v.color?.length) fields.push({ label: 'Base Color', values: v.color });
+  if (v.switches?.length) fields.push({ label: 'Switch', values: v.switches });
+  if (v.keycaps?.length) fields.push({ label: 'Keycaps', values: v.keycaps });
+  return fields;
+}
+
+interface CouponLineProps {
+  code: string;
+  discount: string;
+  discountType: string;
+  copied: boolean;
+  onCopy: () => void;
+}
+
+function CouponLine({ code, discount, discountType, copied, onCopy }: CouponLineProps) {
+  return (
+    <button
+      type="button"
+      className="vendor-card-coupon"
+      onClick={onCopy}
+    >
+      <span className="vendor-card-coupon-code">{code}</span>
+      <span className="vendor-card-coupon-right">
+        <span className={`vendor-card-coupon-discount ${discountType}`}>
+          {copied ? '✓ COPIED' : discount}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
   const [showAllCoupons, setShowAllCoupons] = useState(false);
-  const [variantsRendered, setVariantsRendered] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [variantsOpen, setVariantsOpen] = useState(false);
+  const [variantsEverOpened, setVariantsEverOpened] = useState(false);
   const availability = vp.availability || vp.stockStatus || 'in_stock';
   const link = vp.vendor.affiliateLink || vp.vendorUrl;
   const shipping = vp.shippingIncluded
@@ -31,153 +65,170 @@ export function VendorCard({ vendorProduct: vp, isLowest = false }: VendorCardPr
   const variants = vp.variants ?? [];
   const hasVariants = variants.length > 0;
   const allCoupons = (vp.coupons ?? []).filter((c) => c.enabled);
-  const hasCoupons = allCoupons.length > 0;
   const bestCoupon = getBestCoupon(allCoupons, toNum(vp.totalPrice));
   const extraCount = allCoupons.length - 1;
   const hasFreeShipping = allCoupons.some((c) => c.discountType === 'free_shipping');
 
-  const discountLabel = (c: typeof bestCoupon) => {
-    if (!c) return null;
-    return formatCouponDiscount(c);
-  };
+  const activeVendorCoupon = vp.vendor.couponsEnabled !== false
+    ? (vp.vendor.coupons ?? []).filter((c) => isCouponActive(c)).sort(sortCouponsByPriority)[0] ?? null
+    : null;
+  const buyLink = activeVendorCoupon?.affiliateLink || link;
 
-  const toggleVariants = () => {
-    if (variantsOpen) {
-      setVariantsOpen(false);
-    } else {
-      if (!variantsRendered) {
-        setVariantsRendered(true);
-        requestAnimationFrame(() => requestAnimationFrame(() => setVariantsOpen(true)));
-      } else {
-        setVariantsOpen(true);
-      }
+  const effectivePrice = toNum(vp.effectivePrice);
+  const lastChecked = vp.lastCheckedAt ?? vp.lastChecked ?? null;
+
+  const copyCoupon = async (id: string, code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1000);
+    } catch {
+      // clipboard unavailable (non-secure context) — nothing to do
     }
   };
 
-  const variantFields = (v: NonNullable<VendorProductWithVendor['variants']>[number]) =>
-    [
-      { label: 'Base Color', value: v.color?.join(', ') },
-      { label: 'Switch', value: v.switches?.join(', ') },
-      { label: 'Keycaps', value: v.keycaps?.join(', ') },
-    ].filter((f): f is { label: string; value: string } => !!f.value && f.value.trim().length > 0);
+  const toggleVariants = () => {
+    if (!variantsOpen) setVariantsEverOpened(true);
+    setVariantsOpen((open) => !open);
+  };
 
-  const variantsPanelId = `vendor-variants-${vp.id}`;
+  const renderProductCoupon = (c: NonNullable<VendorProductWithVendor['coupons']>[number]) => {
+    return (
+      <CouponLine
+        key={c.id}
+        code={c.code}
+        discount={formatCouponDiscount(c)}
+        discountType={c.discountType}
+        copied={copiedId === c.id}
+        onCopy={() => copyCoupon(c.id, c.code)}
+      />
+    );
+  };
 
   return (
-    <div className={`vendor-card ${isLowest ? 'vendor-card-lowest' : ''}`}>
-      <div className="vendor-card-row">
-        <span className="vendor-card-name">{vp.vendor.name}</span>
-        <span className="vendor-card-price">
-          {toNum(vp.effectivePrice) < toNum(vp.totalPrice) && (
-            <span className="vendor-card-price-original">
-              {formatPrice(toNum(vp.totalPrice))}
-            </span>
-          )}
-          {formatPrice(toNum(vp.effectivePrice))}
-        </span>
-      </div>
-      <div className="vendor-card-row">
-        <span className="vendor-card-shipping">{shipping}</span>
-        <AvailabilityBadge availability={availability} />
-      </div>
-
-      {/* Coupons */}
-      {hasCoupons && (
-        <div className="vendor-card-coupons">
-          {bestCoupon && (
-            <div className="vendor-card-coupon" onClick={() => bestCoupon.couponUrl && window.open(bestCoupon.couponUrl, '_blank')}>
-              <span className="vendor-card-coupon-icon">🏷</span>
-              <span className="vendor-card-coupon-code">{bestCoupon.code}</span>
-              <span className={`vendor-card-coupon-discount ${bestCoupon.discountType}`}>
-                {discountLabel(bestCoupon)}
-              </span>
-              {bestCoupon.couponUrl && (
-                <ExternalLink size={10} className="vendor-card-coupon-link" />
+    <div className="vendor-card">
+      <div className="vendor-card-body">
+        {/* Header: name/shipping left · price/stock/buy right */}
+        <div className="vendor-card-head">
+          <div className="vendor-card-head-name">
+            <span className="vendor-card-name">{vp.vendor.name}</span>
+          </div>
+          <div className="vendor-card-head-price">
+            <span className="vendor-card-price">
+              {effectivePrice < toNum(vp.totalPrice) && (
+                <span className="vendor-card-price-original">
+                  {formatPrice(toNum(vp.totalPrice))}
+                </span>
               )}
-            </div>
-          )}
-          {hasFreeShipping && !bestCoupon?.discountType?.includes('free_shipping') && (
-            <div className="vendor-card-coupon vendor-card-coupon-ship">
-              <span className="vendor-card-coupon-icon">🚚</span>
-              <span className="vendor-card-coupon-discount free_shipping">FREE SHIPPING</span>
-            </div>
-          )}
-          {extraCount > 0 && (
-            <button type="button" className="vendor-card-coupon-more" onClick={() => setShowAllCoupons(!showAllCoupons)}>
-              {showAllCoupons ? 'Show less' : `+${extraCount} more`}
-            </button>
-          )}
-          {showAllCoupons && allCoupons.slice(1).map((c) => (
-            <div key={c.id} className="vendor-card-coupon" onClick={() => c.couponUrl && window.open(c.couponUrl, '_blank')}>
-              <span className="vendor-card-coupon-icon">🏷</span>
-              <span className="vendor-card-coupon-code">{c.code}</span>
-              <span className={`vendor-card-coupon-discount ${c.discountType}`}>
-                {discountLabel(c)}
-              </span>
-              {c.couponUrl && (
-                <ExternalLink size={10} className="vendor-card-coupon-link" />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {hasVariants && (
-        <div className="vendor-card-variants">
-          <button
-            type="button"
-            className="vendor-card-variants-toggle"
-            aria-expanded={variantsOpen}
-            aria-controls={variantsPanelId}
-            onClick={toggleVariants}
-          >
-            <span className="vendor-card-variants-toggle-count">Variants ({variants.length})</span>
-            <span className="vendor-card-variants-toggle-arrow">
-              {variantsOpen ? '▲ Hide variants' : '▼ Show variants'}
+              {formatPrice(effectivePrice)}
             </span>
-          </button>
-          <div
-            id={variantsPanelId}
-            className={`vendor-card-variants-body ${variantsOpen ? 'open' : ''}`}
-          >
-            <div className="vendor-card-variants-inner">
-              {variantsRendered && variants.map((v) => {
-                const vLink = v.variantUrl || link;
-                return (
-                  <div key={v.id} className="vendor-card-variant">
-                    <div className="vendor-card-variant-info">
-                      <div className="vendor-card-variant-name">{v.name || 'Unnamed'}</div>
-                      {variantFields(v).map((f) => (
-                        <div key={f.label} className="vendor-card-variant-field">
-                          <span className="vendor-card-variant-field-label">{f.label}</span>
-                          <span className="vendor-card-variant-field-value">{f.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="vendor-card-variant-action">
-                      <span className="vendor-card-variant-price">{formatPrice(toNum(v.price))}</span>
-                      <AvailabilityBadge availability={v.stockStatus} size="sm" />
-                      <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          </div>
+          <div className="vendor-card-head-stock">
+            <AvailabilityBadge availability={availability} />
+          </div>
+          <div className="vendor-card-head-shipping">
+            <span className="vendor-card-shipping">{shipping}</span>
           </div>
         </div>
-      )}
-      <div className="vendor-card-row vendor-card-footer">
-        <span className="vendor-card-updated">
-          Last Updated: {vp.lastCheckedAt ? timeAgo(new Date(vp.lastCheckedAt)) : vp.lastChecked ? timeAgo(new Date(vp.lastChecked)) : '—'}
-        </span>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary btn-sm vendor-card-buy"
-        >
-          BUY NOW <ExternalLink size={12} />
-        </a>
+
+        {/* Variants */}
+        {hasVariants && (
+          <div className="vendor-card-variants">
+            <button
+              type="button"
+              className="vendor-card-variants-toggle"
+              aria-expanded={variantsOpen}
+              aria-controls={`vendor-variants-${vp.id}`}
+              onClick={toggleVariants}
+            >
+              <span className="vendor-card-variants-toggle-title">Variants ({variants.length})</span>
+              <span className="vendor-card-variants-toggle-caret">
+                <span className="vendor-card-variants-caret-icon" aria-hidden="true">▼</span>
+                <span>{variantsOpen ? 'Hide variants' : 'Show variants'}</span>
+              </span>
+            </button>
+            <div
+              id={`vendor-variants-${vp.id}`}
+              className={`vendor-card-variants-panel ${variantsOpen ? 'open' : ''}`}
+            >
+              <div className="vendor-card-variants-panel-inner">
+                {variantsEverOpened && variants.map((v) => {
+                  const vLink = v.variantUrl || link;
+                  const fields = variantFields(v);
+                  return (
+                    <div key={v.id} className="vendor-card-variant">
+                      <div className="vendor-card-variant-body">
+                        <span className="vendor-card-variant-name">{v.name || 'Unnamed'}</span>
+                        {fields.length > 0 && (
+                          <div className="vendor-card-variant-fields">
+                            {fields.map((f) => (
+                              <div key={f.label} className="vendor-card-variant-field">
+                                <span className="vendor-card-variant-field-label">{f.label}</span>
+                                <span className="vendor-card-variant-field-value">{f.values.join(', ')}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="vendor-card-variant-right">
+                        <span className="vendor-card-variant-price">{formatPrice(toNum(v.price))}</span>
+                        <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom row: last updated + coupon/buy actions */}
+        <div className="vendor-card-cta">
+          {lastChecked && (
+            <span className="vendor-card-updated">
+              Last Updated: {timeAgo(new Date(lastChecked))}
+            </span>
+          )}
+          <div className="vendor-card-actions">
+            <div className="vendor-card-coupons">
+              {activeVendorCoupon && (
+                <CouponLine
+                  code={activeVendorCoupon.code}
+                  discount={formatCouponDiscount(activeVendorCoupon)}
+                  discountType={activeVendorCoupon.discountType}
+                  copied={copiedId === activeVendorCoupon.id}
+                  onCopy={() => copyCoupon(activeVendorCoupon.id, activeVendorCoupon.code)}
+                />
+              )}
+              {bestCoupon && renderProductCoupon(bestCoupon)}
+              {hasFreeShipping && !bestCoupon?.discountType?.includes('free_shipping') && (
+                <div className="vendor-card-coupon vendor-card-coupon-ship">
+                  <span className="vendor-card-coupon-icon">🚚</span>
+                  <span className="vendor-card-coupon-discount free_shipping">FREE SHIPPING</span>
+                </div>
+              )}
+              {extraCount > 0 && (
+                <button
+                  type="button"
+                  className="vendor-card-coupon-more"
+                  onClick={() => setShowAllCoupons((s) => !s)}
+                >
+                  {showAllCoupons ? 'Show less' : `+${extraCount} more`}
+                </button>
+              )}
+              {showAllCoupons && allCoupons.slice(1).filter((c) => c.discountType !== 'free_shipping').map((c) => renderProductCoupon(c))}
+            </div>
+            <a
+              href={buyLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="vendor-card-buy"
+            >
+              <span className="vendor-card-buy-label">BUY NOW</span>
+              <span className="vendor-card-buy-arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -302,11 +302,10 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </div>
           <div className="vendor-cards">
-            {serializedVendorProducts.map((vp, i) => (
+            {serializedVendorProducts.map((vp) => (
               <VendorCard
                 key={vp.id}
                 vendorProduct={vp}
-                isLowest={i === 0}
               />
             ))}
           </div>

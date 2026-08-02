@@ -70,15 +70,30 @@ export function ProductPageSkeleton() {
         <SkeletonRectangle width={150} height={16} className="mb-4" />
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="vendor-card">
-            <div className="vendor-card-row">
-              <SkeletonRectangle width={120} height={18} />
-              <SkeletonRectangle width={100} height={20} />
-            </div>
-            <div className="vendor-card-row mt-2">
-              <SkeletonRectangle width={80} height={12} />
-              <SkeletonBadge />
-              <SkeletonRectangle width={60} height={12} />
-              <SkeletonRectangle width={80} height={32} />
+            <div className="vendor-card-body">
+              <div className="vendor-card-head">
+                <div className="vendor-card-head-name">
+                  <SkeletonRectangle width={120} height={18} />
+                </div>
+                <div className="vendor-card-head-price">
+                  <SkeletonRectangle width={100} height={22} />
+                </div>
+                <div className="vendor-card-head-stock">
+                  <SkeletonBadge />
+                </div>
+                <div className="vendor-card-head-shipping">
+                  <SkeletonRectangle width={80} height={12} />
+                </div>
+              </div>
+              <div className="vendor-card-coupons">
+                <SkeletonRectangle width="100%" height={30} />
+              </div>
+              <div className="vendor-card-variants">
+                <SkeletonRectangle width={140} height={16} />
+              </div>
+              <div className="vendor-card-buy">
+                <SkeletonRectangle width="100%" height={48} />
+              </div>
             </div>
           </div>
         ))}

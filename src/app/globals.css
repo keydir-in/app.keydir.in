@@ -105,8 +105,6 @@
 
 /* ── Vendor cards ── */
 [data-theme="dark"] .vendor-card { background: var(--surface); border-color: var(--border); color: var(--text); }
-[data-theme="dark"] .vendor-card-lowest { border-color: var(--green); box-shadow: 4px 4px 0 rgba(0,255,106,.15); }
-[data-theme="dark"] .vendor-card-footer { border-top-color: var(--border-subtle); }
 
 /* ── Product page ── */
 [data-theme="dark"] .spec-group { background: var(--surface); border-color: var(--border); }

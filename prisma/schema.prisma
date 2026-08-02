@@ -83,6 +83,8 @@ model Vendor {
   customScraper          String?
   scraperVersion         Int             @default(1)
   scraperNotes           String?
+  couponsEnabled         Boolean         @default(true)
+  coupons                VendorCoupon[]
   scrapeLogs             ScrapeLog[]
   vendorProducts         VendorProduct[]
 
@@ -207,6 +209,26 @@ model VendorProductCoupon {
   vendorProduct      VendorProduct @relation(fields: [vendorProductId], references: [id], onDelete: Cascade)
 
   @@index([vendorProductId])
+}
+
+model VendorCoupon {
+  id            String    @id @default(cuid())
+  vendorId      String
+  code          String
+  title         String?
+  description   String?
+  discountType  String    @default("percentage")
+  discountValue Int       @default(0)
+  affiliateLink String?
+  startDate     DateTime?
+  endDate       DateTime?
+  enabled       Boolean   @default(true)
+  priority      Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  vendor        Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
 }
 
 model PriceHistory {

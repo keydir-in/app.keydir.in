@@ -28,6 +28,20 @@ export interface VendorProductWithVendor {
     slug: string;
     logo: string | null;
     affiliateLink: string | null;
+    couponsEnabled?: boolean;
+    coupons?: Array<{
+      id: string;
+      code: string;
+      title: string | null;
+      description: string | null;
+      discountType: string;
+      discountValue: number;
+      affiliateLink: string | null;
+      startDate: Date | null;
+      endDate: Date | null;
+      enabled: boolean;
+      priority: number;
+    }>;
   };
   variants?: Array<{
     id: string;
