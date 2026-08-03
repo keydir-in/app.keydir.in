@@ -202,6 +202,9 @@ export default async function ProductPage({ params }: Props) {
           <div className="product-hero-info">
             <div className="neo-card product-hero-panel">
               <div className="product-hero-summary-body">
+                {product.brand?.name && (
+                  <div className="product-hero-brand">{product.brand.name}</div>
+                )}
                 <h1 className="product-hero-name">{product.name}</h1>
 
                 {lowestPrice && (

@@ -1088,6 +1088,17 @@
   padding: var(--sp-5) var(--sp-6);
 }
 
+/* ── Brand ── */
+.product-hero-brand {
+  font-family: var(--f-m);
+  font-size: .78rem;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-muted);
+  margin: 0 0 0px;
+}
+
 /* ── Name ── */
 .product-hero-name {
   font-family: var(--f-d);

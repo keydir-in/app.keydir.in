@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { clamp } from '@/lib/utils';
-import { type FilterOptions } from '@/lib/constants';
+import { SORT_OPTIONS, type FilterOptions } from '@/lib/constants';
 
 interface CatalogFiltersOpts {
   filtersEndpoint: string;
@@ -29,7 +29,8 @@ export function useCatalogFilters({
   const pathname = usePathname();
 
   const q = searchParams.get('q') || '';
-  const sort = (searchParams.get('sort') as string) || defaultSort;
+  const rawSort = searchParams.get('sort');
+  const sort = rawSort && (SORT_OPTIONS as { value: string }[]).some((o) => o.value === rawSort) ? rawSort : defaultSort;
 
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);

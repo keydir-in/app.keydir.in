@@ -15,6 +15,7 @@ export default async function MousePage() {
       emptyIcon="🔍"
       filtersEndpoint="/api/mouse/filters"
       productsEndpoint="/api/mouse"
+      defaultSort="lowest"
       banners={banners}
       totalCount={totalCount}
     />

@@ -15,6 +15,7 @@ export default async function SwitchesPage() {
       emptyIcon="🔍"
       filtersEndpoint="/api/switches/filters"
       productsEndpoint="/api/switches"
+      defaultSort="lowest"
       banners={banners}
       totalCount={totalCount}
     />

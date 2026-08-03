@@ -15,6 +15,7 @@ export default async function KeycapsPage() {
       emptyIcon="🔍"
       filtersEndpoint="/api/keycaps/filters"
       productsEndpoint="/api/keycaps"
+      defaultSort="lowest"
       banners={banners}
       totalCount={totalCount}
     />
