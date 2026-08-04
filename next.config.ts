@@ -8,6 +8,7 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "script-src 'self' 'unsafe-inline'",
     "https://va.vercel-scripts.com",
     "https://vercel-scripts.com",
+    "https://cloud.umami.is",
   ].join(" "),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: res.cloudinary.com https://*.githubusercontent.com https://*.googleusercontent.com https://cdn.discordapp.com https://media.discordapp.net",
@@ -18,6 +19,8 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "https://*.supabase.in",
     "https://vitals.vercel-insights.com",
     "https://va.vercel-scripts.com",
+    "https://cloud.umami.is",
+    "https://gateway.umami.is",
   ].join(" "),
   [
     "frame-src 'self'",
@@ -52,11 +55,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: isDev ? ["192.168.0.69"] : [],
   devIndicators: false,
   poweredByHeader: false,
-  async rewrites() {
-    return [
-      { source: "/script.js", destination: "https://cloud.umami.is/script.js" },
-    ];
-  },
   serverExternalPackages: ['playwright', 'cheerio'],
   images: {
     formats: ['image/avif', 'image/webp'],
