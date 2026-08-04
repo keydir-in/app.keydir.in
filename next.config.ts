@@ -6,7 +6,6 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
   "default-src 'self'",
   [
     "script-src 'self' 'unsafe-inline'",
-    "https://cloud.umami.is",
     "https://va.vercel-scripts.com",
     "https://vercel-scripts.com",
   ].join(" "),
@@ -17,7 +16,6 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "connect-src 'self'",
     "https://*.supabase.co",
     "https://*.supabase.in",
-    "https://cloud.umami.is",
     "https://vitals.vercel-insights.com",
     "https://va.vercel-scripts.com",
   ].join(" "),
@@ -54,6 +52,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: isDev ? ["192.168.0.69"] : [],
   devIndicators: false,
   poweredByHeader: false,
+  async rewrites() {
+    return [
+      { source: "/script.js", destination: "https://cloud.umami.is/script.js" },
+    ];
+  },
   serverExternalPackages: ['playwright', 'cheerio'],
   images: {
     formats: ['image/avif', 'image/webp'],

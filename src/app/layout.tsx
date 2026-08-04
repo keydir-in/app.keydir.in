@@ -141,9 +141,11 @@ export default function RootLayout({
           />
           <div id="main-content">{children}</div>
           <Script
-            src="https://cloud.umami.is/script.js"
+            defer
+            src="/script.js"
+            data-host-url="https://app.keydir.in"
             data-website-id="daeeffe3-c516-4399-8875-451d8ae110ff"
-            strategy="lazyOnload"
+            strategy="afterInteractive"
           />
           <Analytics />
           <SpeedInsights />
