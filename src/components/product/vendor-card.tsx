@@ -74,7 +74,14 @@ export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
   // Variants sorted by current price ascending (real prices first, zero-price
   // placeholders last); ties broken alphabetically by name.
   const rank = (p: number) => (p > 0 ? p : Infinity);
-  const variants = [...(vp.variants ?? [])].sort(
+  const allVariants = [...(vp.variants ?? [])];
+  // The scraper falls back to a single product-level variant (named after the
+  // page, no variant-identifying fields) when no real variants are found. Show
+  // that fallback row only when the vendor has no real variants to display.
+  const isProductLevel = (v: (typeof allVariants)[number]) =>
+    !v.color?.length && !v.switches?.length && !v.keycaps?.length && !v.sku;
+  const realVariants = allVariants.filter((v) => !isProductLevel(v));
+  const variants = (realVariants.length > 0 ? realVariants : allVariants).sort(
     (a, b) =>
       rank(toNum(a.price)) - rank(toNum(b.price)) || (a.name || '').localeCompare(b.name || ''),
   );
