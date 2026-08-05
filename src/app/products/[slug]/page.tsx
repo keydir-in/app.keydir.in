@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Suspense, cache } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
@@ -9,6 +8,7 @@ import dynamic from 'next/dynamic';
 const PriceHistoryChart = dynamic(() => import('@/components/product/price-history-chart').then(m => m.PriceHistoryChart));
 import { ProductHeroCommunity } from '@/components/product/product-hero-community';
 import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
+import { ProductGallery } from '@/components/product/product-gallery';
 import { ProductSpecs } from '@/components/product/product-specs';
 import { findProductBySlug } from '@/lib/repositories/product-repository';
 import { formatPrice, timeAgo, toNum } from '@/lib/utils';
@@ -63,6 +63,14 @@ export default async function ProductPage({ params }: Props) {
 
   if (!product) notFound();
 
+  // Gallery shows the primary image first (matches listing cards), then any
+  // extra ProductImage rows by sortOrder. Falls back to the single image.
+  const galleryImages = (() => {
+    const urls = product.images.map((i) => i.url);
+    if (product.image) urls.unshift(product.image);
+    return [...new Set(urls.filter((u): u is string => !!u))];
+  })();
+
   const serializedVendorProducts = product.vendorProducts.map((vp) => ({
     ...vp,
     price: Number(vp.price),
@@ -99,11 +107,37 @@ export default async function ProductPage({ params }: Props) {
   }
 
   const { upvotes, downvotes } = computeVoteStats(product.votes);
-  const lowestPrice = serializedVendorProducts[0]?.effectivePrice ?? null;
-  const highestPrice = serializedVendorProducts.length > 1
-    ? serializedVendorProducts[serializedVendorProducts.length - 1]?.effectivePrice ?? null
-    : null;
   const vendorCount = serializedVendorProducts.length;
+
+  // Price range spans every priced, non-discontinued variant across all
+  // vendors (in-stock preferred) — not just vendor group prices.
+  const allVariants = serializedVendorProducts.flatMap((vp) =>
+    vp.variants
+      .filter((v) => toNum(v.price) > 0 && v.stockStatus !== 'discontinued')
+      .map((v) => ({
+        price: toNum(v.price),
+        originalPrice: v.originalPrice != null && toNum(v.originalPrice) > 0 ? toNum(v.originalPrice) : null,
+        buyable: v.availability !== 'OUT_OF_STOCK' && v.availability !== 'COMING_SOON' && v.availability !== 'GROUP_BUY',
+      })),
+  );
+  const pricedPool = allVariants.some((v) => v.buyable) ? allVariants.filter((v) => v.buyable) : allVariants;
+  const uniquePrices = [...new Set(pricedPool.map((v) => v.price))].sort((a, b) => a - b);
+  const rangeMin = uniquePrices[0] ?? null;
+  const rangeMax = uniquePrices.length > 1 ? uniquePrices[uniquePrices.length - 1] : null;
+
+  // Lowest current price = cheapest in-stock variant; falls back to any priced
+  // variant, then the cheapest vendor group price.
+  const bestVariant = pricedPool.reduce<(typeof pricedPool)[number] | null>(
+    (min, v) => (min === null || v.price < min.price ? v : min),
+    null,
+  );
+  const lowestPrice = bestVariant?.price ?? serializedVendorProducts[0]?.effectivePrice ?? null;
+  const originalPrice =
+    bestVariant?.originalPrice != null && lowestPrice != null && bestVariant.originalPrice > lowestPrice
+      ? bestVariant.originalPrice
+      : null;
+  const savings = originalPrice != null && lowestPrice != null ? originalPrice - lowestPrice : null;
+  const savingsPct = savings != null && originalPrice != null ? Math.round((savings / originalPrice) * 100) : null;
 
   const lastUpdated = serializedVendorProducts.reduce<Date | null>((latest, vp) => {
     const newest = vp.priceHistory.at(-1)?.recordedAt ?? vp.updatedAt;
@@ -181,20 +215,7 @@ export default async function ProductPage({ params }: Props) {
           {/* Product Image panel */}
           <div className="product-hero-image">
             <div className="neo-card product-hero-panel product-hero-image-card">
-              {product.image ? (
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  width={600}
-                  height={600}
-                  className="w-full aspect-square object-contain"
-                  priority
-                />
-              ) : (
-                <div className="w-full aspect-square bg-[var(--surface-raised)] flex items-center justify-center text-7xl font-bold font-[family-name:var(--f-m)] text-[var(--text-dim)]">
-                  {product.name.charAt(0)}
-                </div>
-              )}
+              <ProductGallery images={galleryImages} name={product.name} />
             </div>
           </div>
 
@@ -211,14 +232,17 @@ export default async function ProductPage({ params }: Props) {
                   <div className="product-hero-price-block">
                     <span className="product-hero-price-label">PRICE</span>
                     <div className="product-hero-price-row">
-                      <span className="product-hero-price">{formatPrice(toNum(lowestPrice))}</span>
-                      {highestPrice && highestPrice !== lowestPrice && (
-                        <>
-                          <span className="product-hero-price-range-sep">→</span>
-                          <span className="product-hero-price-alt">{formatPrice(toNum(highestPrice))}</span>
-                        </>
+                      {originalPrice && (
+                        <span className="product-hero-price-original">{formatPrice(originalPrice)}</span>
                       )}
+                      <span className="product-hero-price">{formatPrice(toNum(lowestPrice))}</span>
                     </div>
+                    {savings != null && savings > 0 && (
+                      <span className="product-hero-price-save">
+                        Save {formatPrice(savings)}
+                        {savingsPct != null ? ` (${savingsPct}% off)` : ''}
+                      </span>
+                    )}
                     <span className="product-hero-price-sub">
                       Lowest across {vendorCount} vendor{vendorCount !== 1 ? 's' : ''}
                     </span>
@@ -269,13 +293,13 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <div className="product-stat-card">
             <div className="product-stat-label">Price Range</div>
-            {lowestPrice ? (
+            {rangeMin ? (
               <div className="product-stat-price-row">
-                <span className="product-stat-big">{formatPrice(toNum(lowestPrice))}</span>
-                {highestPrice && highestPrice !== lowestPrice && (
+                <span className="product-stat-big">{formatPrice(rangeMin)}</span>
+                {rangeMax && rangeMax !== rangeMin && (
                   <>
                     <span className="product-stat-arrow">→</span>
-                    <span className="product-stat-big alt">{formatPrice(toNum(highestPrice))}</span>
+                    <span className="product-stat-big alt">{formatPrice(rangeMax)}</span>
                   </>
                 )}
               </div>

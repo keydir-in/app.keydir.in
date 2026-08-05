@@ -99,7 +99,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head />
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen flex flex-col font-[family-name:var(--f-d)]`}
+        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen flex flex-col font-(family-name:--f-d)`}
       >
         <ThemeScript />
         <a href="#main-content" className="skip-link">

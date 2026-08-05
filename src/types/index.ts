@@ -20,7 +20,7 @@ export interface VendorProductWithVendor {
   availability?: Availability;
   lastChecked?: Date;
   lastCheckedAt?: Date | null;
-  vendorUrl: string;
+  vendorUrl?: string | null;
   scrapeStatus?: ScrapeStatus;
   scrapeError?: string | null;
   vendor: {

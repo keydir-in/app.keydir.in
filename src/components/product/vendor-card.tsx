@@ -25,6 +25,15 @@ function variantFields(v: { color: string[] | null; switches: string[] | null; k
   return fields;
 }
 
+/** Cheapest priced variant, preferring in-stock ones (fallback: any variant). */
+function pickLowestVariant(variants: NonNullable<VendorProductWithVendor['variants']>) {
+  const priced = variants.filter((v) => toNum(v.price) > 0);
+  if (priced.length === 0) return null;
+  const available = priced.filter((v) => v.stockStatus && v.stockStatus !== 'out_of_stock' && v.stockStatus !== 'discontinued');
+  const pool = available.length > 0 ? available : priced;
+  return [...pool].sort((a, b) => toNum(a.price) - toNum(b.price))[0] ?? null;
+}
+
 interface CouponLineProps {
   code: string;
   discount: string;
@@ -62,19 +71,31 @@ export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
     : toNum(vp.shippingCost) > 0
       ? `Shipping ${formatPrice(toNum(vp.shippingCost))}`
       : 'Free Shipping';
-  const variants = vp.variants ?? [];
+  // Variants sorted by current price ascending (real prices first, zero-price
+  // placeholders last); ties broken alphabetically by name.
+  const rank = (p: number) => (p > 0 ? p : Infinity);
+  const variants = [...(vp.variants ?? [])].sort(
+    (a, b) =>
+      rank(toNum(a.price)) - rank(toNum(b.price)) || (a.name || '').localeCompare(b.name || ''),
+  );
   const hasVariants = variants.length > 0;
+  const lowestVariant = hasVariants ? pickLowestVariant(variants) : null;
   const allCoupons = (vp.coupons ?? []).filter((c) => c.enabled);
   const bestCoupon = getBestCoupon(allCoupons, toNum(vp.totalPrice));
   const extraCount = allCoupons.length - 1;
   const hasFreeShipping = allCoupons.some((c) => c.discountType === 'free_shipping');
 
+  const effectivePrice = toNum(vp.effectivePrice);
   const activeVendorCoupon = vp.vendor.couponsEnabled !== false
     ? (vp.vendor.coupons ?? []).filter((c) => isCouponActive(c)).sort(sortCouponsByPriority)[0] ?? null
     : null;
-  const buyLink = activeVendorCoupon?.affiliateLink || link;
+  // Main BUY opens the lowest-priced available variant; falls back to the
+  // coupon/vendor affiliate link, then the vendor URL.
+  const buyLink = lowestVariant?.variantUrl || activeVendorCoupon?.affiliateLink || link;
+  // "From ₹X" uses the raw lowest variant price.
+  const fromPrice = lowestVariant ? toNum(lowestVariant.price) : effectivePrice;
+  const showFrom = hasVariants && variants.length > 1;
 
-  const effectivePrice = toNum(vp.effectivePrice);
   const lastChecked = vp.lastCheckedAt ?? vp.lastChecked ?? null;
 
   const copyCoupon = async (id: string, code: string) => {
@@ -115,12 +136,12 @@ export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
           </div>
           <div className="vendor-card-head-price">
             <span className="vendor-card-price">
-              {effectivePrice < toNum(vp.totalPrice) && (
+              {!showFrom && effectivePrice < toNum(vp.totalPrice) && (
                 <span className="vendor-card-price-original">
                   {formatPrice(toNum(vp.totalPrice))}
                 </span>
               )}
-              {formatPrice(effectivePrice)}
+              {showFrom ? `From ${formatPrice(fromPrice)}` : formatPrice(effectivePrice)}
             </span>
           </div>
           <div className="vendor-card-head-stock">
@@ -172,7 +193,11 @@ export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
                       </div>
                       <div className="vendor-card-variant-right">
                         <span className="vendor-card-variant-price">{formatPrice(toNum(v.price))}</span>
-                        <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
+                        {vLink ? (
+                          <a href={vLink} target="_blank" rel="noopener noreferrer" className="btn-primary btn-xs">BUY</a>
+                        ) : (
+                          <span className="vendor-card-variant-buy-none">—</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -218,15 +243,17 @@ export function VendorCard({ vendorProduct: vp }: VendorCardProps) {
               )}
               {showAllCoupons && allCoupons.slice(1).filter((c) => c.discountType !== 'free_shipping').map((c) => renderProductCoupon(c))}
             </div>
-            <a
-              href={buyLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="vendor-card-buy"
-            >
-              <span className="vendor-card-buy-label">BUY NOW</span>
-              <span className="vendor-card-buy-arrow" aria-hidden="true">↗</span>
-            </a>
+            {buyLink ? (
+              <a
+                href={buyLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="vendor-card-buy"
+              >
+                <span className="vendor-card-buy-label">BUY NOW</span>
+                <span className="vendor-card-buy-arrow" aria-hidden="true">↗</span>
+              </a>
+            ) : null}
           </div>
         </div>
       </div>

@@ -165,6 +165,7 @@ export { prisma };
 
 const PRODUCT_DETAIL_INCLUDE = {
   brand: { select: { name: true, slug: true } },
+  images: { orderBy: { sortOrder: 'asc' as const } },
   keyboardSpec: true,
   switchSpec: true,
   keycapSpec: true,

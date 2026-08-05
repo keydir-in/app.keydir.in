@@ -131,7 +131,7 @@ model VendorProduct {
   id                      String                @id @default(cuid())
   vendorId                String
   productId               String
-  vendorUrl               String
+  vendorUrl               String?
   price                   Int                   @default(0)
   availability            Availability          @default(IN_STOCK)
   shippingCost            Int                   @default(0)
@@ -180,12 +180,17 @@ model VendorVariant {
   color           Json?
   switches        Json?
   keycaps         Json?
+  specifications  Json?
   price           Int           @default(0)
+  originalPrice   Int?
   availability    Availability  @default(IN_STOCK)
   stockStatus     String        @default("in_stock")
   variantUrl      String?
   sku             String?
+  image           String?
   isDefault       Boolean       @default(false)
+  scrapeStatus    ScrapeStatus  @default(PENDING)
+  scrapeError     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id], onDelete: Cascade)
