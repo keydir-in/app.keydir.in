@@ -104,7 +104,7 @@
 [data-theme="dark"] .save-btn.active { background: var(--yellow); color: #111; border-color: var(--yellow); }
 
 /* ── Vendor cards ── */
-[data-theme="dark"] .vendor-card { background: var(--surface); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .vendor-row { background: var(--surface); border-color: var(--border); color: var(--text); }
 
 /* ── Product page ── */
 [data-theme="dark"] .spec-group { background: var(--surface); border-color: var(--border); }

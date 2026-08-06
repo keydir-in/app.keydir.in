@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Product card component with image, price display, coupon badge, and
  * upvote count. Supports listing and profile variants; the profile
@@ -8,6 +10,7 @@ import Link from 'next/link';
 import { ProductCardImage } from '@/components/shared/product-card-image';
 import { CouponBadge } from '@/components/shared/coupon-badge';
 import { PriceDisplay } from '@/components/shared/price-display';
+import ArrowBigUpIcon from '@/components/product/arrow-big-up-icon';
 import type { ProductCard as ProductCardType } from '@/types';
 
 interface ProductCardProps {
@@ -71,7 +74,10 @@ export function ProductCard({ product, variant = 'listing', brand, onRemove, rem
           {hasPrice && (
             <PriceDisplay price={product.lowestPrice!} originalPrice={product.originalPrice} />
           )}
-          <span className="product-card-upvotes">▲{product.upvotes}</span>
+          <span className="product-card-upvotes">
+            <ArrowBigUpIcon size={12} strokeWidth={2} />
+            {product.upvotes}
+          </span>
         </div>
 
         <div className="product-card-cta">

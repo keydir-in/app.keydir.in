@@ -195,7 +195,7 @@ function renderRow(row: SpecRowDef, spec: Record<string, unknown>): React.ReactN
   }
 }
 
-export function ProductSpecs({ productType, spec }: Props) {
+export function SpecGrid({ productType, spec }: Props) {
   const config = CATEGORY_SPECS[productType];
   if (!config || !spec) return null;
 
@@ -211,22 +211,32 @@ export function ProductSpecs({ productType, spec }: Props) {
   if (!groups.length) return null;
 
   return (
+    <div className="spec-groups">
+      {groups.map((g) => (
+        <div key={g.title} className="spec-group">
+          <div className="spec-group-header">
+            <span className="spec-group-title">{g.title}</span>
+          </div>
+          <div className="spec-group-body">
+            {g.renderedRows}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ProductSpecs({ productType, spec }: Props) {
+  if (!CATEGORY_SPECS[productType] || !spec) return null;
+  const groups = SpecGrid({ productType, spec });
+  if (groups === null) return null;
+
+  return (
     <section className="product-section">
       <div className="sec-head">
         <h2><em className="text-[var(--yellow)]">SPECIFICATIONS</em></h2>
       </div>
-      <div className="spec-groups">
-        {groups.map((g) => (
-          <div key={g.title} className="spec-group">
-            <div className="spec-group-header">
-              <span className="spec-group-title">{g.title}</span>
-            </div>
-            <div className="spec-group-body">
-              {g.renderedRows}
-            </div>
-          </div>
-        ))}
-      </div>
+      {groups}
     </section>
   );
 }

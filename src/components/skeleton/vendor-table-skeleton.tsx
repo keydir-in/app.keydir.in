@@ -60,30 +60,23 @@ export function VendorCardSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="vendor-cards" aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="vendor-card">
-          <div className="vendor-card-body">
-            <div className="vendor-card-head">
-              <div className="vendor-card-head-name">
-                <SkeletonRectangle width={120} height={18} />
-              </div>
-              <div className="vendor-card-head-price">
-                <SkeletonRectangle width={100} height={22} />
-              </div>
-              <div className="vendor-card-head-stock">
-                <SkeletonBadge />
-              </div>
-              <div className="vendor-card-head-shipping">
-                <SkeletonRectangle width={80} height={12} />
-              </div>
+        <div key={i} className="vendor-row">
+          <div className="vendor-row-grid">
+            <div className="vendor-row-logo">
+              <SkeletonRectangle width={72} height={72} />
             </div>
-            <div className="vendor-card-coupons">
-              <SkeletonRectangle width="100%" height={30} />
-            </div>
-            <div className="vendor-card-variants">
+            <div className="vendor-row-info">
               <SkeletonRectangle width={140} height={16} />
+              <SkeletonRectangle width={110} height={10} />
+              <SkeletonRectangle width={90} height={22} />
             </div>
-            <div className="vendor-card-buy">
-              <SkeletonRectangle width="100%" height={48} />
+            <div className="vendor-row-price-block">
+              <SkeletonRectangle width={110} height={20} />
+              <SkeletonBadge />
+            </div>
+            <div className="vendor-row-actions">
+              <SkeletonRectangle width={60} height={10} />
+              <SkeletonButton />
             </div>
           </div>
         </div>

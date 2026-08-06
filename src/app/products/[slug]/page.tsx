@@ -3,19 +3,21 @@ import Link from 'next/link';
 import { Suspense, cache } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { VendorCard } from '@/components/product/vendor-card';
-import dynamic from 'next/dynamic';
-const PriceHistoryChart = dynamic(() => import('@/components/product/price-history-chart').then(m => m.PriceHistoryChart));
+import { VendorRow } from '@/components/product/vendor-row';
 import { ProductHeroCommunity } from '@/components/product/product-hero-community';
+import { BookmarkButton } from '@/components/product/bookmark-button';
 import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
 import { ProductGallery } from '@/components/product/product-gallery';
-import { ProductSpecs } from '@/components/product/product-specs';
+import { ProductTabs } from '@/components/product/product-tabs';
 import { findProductBySlug } from '@/lib/repositories/product-repository';
 import { resolveBestDeal } from '@/lib/services/coupon-utils';
-import { formatPrice, timeAgo, toNum } from '@/lib/utils';
+import { formatPrice, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
 import { prisma } from '@/lib/prisma';
+import { CalendarDays } from 'lucide-react';
+import CurrencyRupeeIcon from '@/components/product/currency-rupee-icon';
+import TruckElectricIcon from '@/components/product/truck-electric-icon';
 import type { Metadata } from 'next';
 
 export const revalidate = 300;
@@ -92,18 +94,11 @@ export default async function ProductPage({ params }: Props) {
     })),
   }));
 
-  let inCollection = false;
   let userVote: 'upvote' | 'downvote' | null = null;
   if (currentUser) {
-    const [collectItem, voteItem] = await Promise.all([
-      prisma.collection.findUnique({
-        where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
-      }),
-      prisma.vote.findUnique({
-        where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
-      }),
-    ]);
-    inCollection = !!collectItem;
+    const voteItem = await prisma.vote.findUnique({
+      where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
+    });
     userVote = (voteItem?.type as 'upvote' | 'downvote') || null;
   }
 
@@ -240,14 +235,18 @@ export default async function ProductPage({ params }: Props) {
           <div className="product-hero-info">
             <div className="neo-card product-hero-panel">
               <div className="product-hero-summary-body">
-                {product.brand?.name && (
-                  <div className="product-hero-brand">{product.brand.name}</div>
-                )}
-                <h1 className="product-hero-name">{product.name}</h1>
+                <div className="product-hero-title-row">
+                  <div className="product-hero-title">
+                    {product.brand?.name && (
+                      <div className="product-hero-brand">{product.brand.name}</div>
+                    )}
+                    <h1 className="product-hero-name">{product.name}</h1>
+                  </div>
+                  <BookmarkButton />
+                </div>
 
                 {lowestPrice && (
                   <div className="product-hero-price-block">
-                    <span className="product-hero-price-label">PRICE</span>
                     <div className="product-hero-price-row">
                       {originalPrice && (
                         <span className="product-hero-price-original">{formatPrice(originalPrice)}</span>
@@ -286,17 +285,10 @@ export default async function ProductPage({ params }: Props) {
                 <Suspense fallback={<div className="neo-card product-hero-panel" style={{ height: 160 }}><div className="skeleton-pulse" style={{ height: '100%' }} /></div>}>
                   <ProductHeroCommunity
                     productId={product.id}
-                    productSlug={product.slug}
-                    productName={product.name}
-                    productImage={product.image}
-                    productPrice={lowestPrice}
-                    productCategory={product.productType}
                     upvotes={upvotes}
                     downvotes={downvotes}
                     userVote={userVote}
-                    inCollection={inCollection}
                     showVoting={product.productType === 'keyboards' || product.productType === 'mouse'}
-                    showCompare={product.productType === 'keyboards' || product.productType === 'mouse'}
                   />
                 </Suspense>
               </div>
@@ -307,34 +299,49 @@ export default async function ProductPage({ params }: Props) {
         {/* ═══ HERO STATS ═══ */}
         <div className="product-hero-stats">
           <div className="product-stat-card">
-            <div className="product-stat-label">Available</div>
-            <div className="product-stat-big">{vendorCount}</div>
-            <div className="product-stat-unit">VENDOR{vendorCount !== 1 ? 'S' : ''}</div>
+            <div className="product-stat-icon">
+              <TruckElectricIcon size={20} strokeWidth={2} />
+            </div>
+            <div className="product-stat-info">
+              <div className="product-stat-value">{vendorCount}</div>
+              <div className="product-stat-label">Vendors Available</div>
+            </div>
           </div>
           <div className="product-stat-card">
-            <div className="product-stat-label">Price Range</div>
-            {rangeMin ? (
-              <div className="product-stat-price-row">
-                <span className="product-stat-big">{formatPrice(rangeMin)}</span>
-                {rangeMax && rangeMax !== rangeMin && (
-                  <>
-                    <span className="product-stat-arrow">→</span>
-                    <span className="product-stat-big alt">{formatPrice(rangeMax)}</span>
-                  </>
+            <div className="product-stat-icon">
+              <CurrencyRupeeIcon size={20} strokeWidth={2} />
+            </div>
+            <div className="product-stat-info">
+              <div className="product-stat-value">
+                {rangeMin ? (
+                  <div className="product-stat-price-row">
+                    <span>{formatPrice(rangeMin)}</span>
+                    {rangeMax && rangeMax !== rangeMin && (
+                      <>
+                        <span className="product-stat-arrow">→</span>
+                        <span className="product-stat-value-alt">{formatPrice(rangeMax)}</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  '—'
                 )}
               </div>
-            ) : (
-              <div className="product-stat-big">—</div>
-            )}
+              <div className="product-stat-label">Price Range</div>
+            </div>
           </div>
           <div className="product-stat-card">
-            <div className="product-stat-label">Last Updated</div>
-            <div className="product-stat-big">
-              {lastUpdated ? lastUpdated.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            <div className="product-stat-icon">
+              <CalendarDays size={20} strokeWidth={2} />
             </div>
-            {lastUpdated && (
-              <div className="product-stat-unit">{timeAgo(lastUpdated)}</div>
-            )}
+            <div className="product-stat-info">
+              <div className="product-stat-value">
+                {lastUpdated
+                  ? lastUpdated.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
+                  : '—'}
+              </div>
+              <div className="product-stat-label">Last Updated</div>
+            </div>
           </div>
         </div>
 
@@ -350,7 +357,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <div className="vendor-cards">
             {serializedVendorProducts.map((vp) => (
-              <VendorCard
+              <VendorRow
                 key={vp.id}
                 vendorProduct={vp}
               />
@@ -358,22 +365,13 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </section>
 
-        {/* ═══ PRICE HISTORY ═══ */}
-        <section className="product-section">
-          <div className="sec-head">
-            <h2>
-              <em className="text-[var(--yellow)]">PRICE HISTORY</em>
-            </h2>
-          </div>
-          <Suspense fallback={<div className="spec-empty">Loading price history...</div>}>
-            <PriceHistoryChart history={allHistory} vendorColors={vendorColors} />
-          </Suspense>
-        </section>
-
-        {/* ═══ SPECIFICATIONS ═══ */}
-        <ProductSpecs
+        {/* ═══ PRICE HISTORY + SPECIFICATIONS (TABS) ═══ */}
+        <ProductTabs
           productType={product.productType}
           spec={product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec}
+          description={product.description}
+          history={allHistory}
+          vendorColors={vendorColors}
         />
       </div>
 

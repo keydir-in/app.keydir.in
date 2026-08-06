@@ -11,6 +11,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import Image from 'next/image';
+import MagnifierIcon from '@/components/product/magnifier-icon';
 
 interface SearchResult {
   products: { name: string; slug: string; image: string | null; brand: string | null; category: string | null; categorySlug: string | null }[];
@@ -100,7 +101,7 @@ export function GlobalSearch() {
     <div ref={wrapRef} className={`nav-search-wrap${open ? ' expanded' : ''}`}>
       {!open ? (
         <button className="nav-search-toggle" onClick={expand} aria-label="Search">
-          <Search size={18} strokeWidth={1.5} />
+          <MagnifierIcon size={18} strokeWidth={1.5} />
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="nav-search">

@@ -94,6 +94,25 @@ export function ProductGallery({ images, name }: Props) {
       >
         <ChevronRight size={20} strokeWidth={3} />
       </button>
+      <div className="product-gallery-thumbs">
+        {images.map((src, i) => (
+          <button
+            key={src}
+            type="button"
+            className={`product-gallery-thumb${i === index ? ' is-active' : ''}`}
+            onClick={() => setIndex(i)}
+            aria-label={`View image ${i + 1} of ${count}`}
+          >
+            <Image
+              src={src}
+              alt=""
+              width={80}
+              height={80}
+              className="product-gallery-thumb-img"
+            />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
