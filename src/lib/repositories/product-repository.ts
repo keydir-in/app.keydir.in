@@ -15,6 +15,7 @@ const PRODUCT_CARD_INCLUDE = {
     select: {
       totalPrice: true,
       effectivePrice: true,
+      coupons: { select: { code: true, discountType: true, discountValue: true, enabled: true, expiryDate: true } },
       _count: { select: { coupons: { where: { enabled: true } } } },
     },
     orderBy: { effectivePrice: 'asc' as const },

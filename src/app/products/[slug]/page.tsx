@@ -11,6 +11,7 @@ import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
 import { ProductGallery } from '@/components/product/product-gallery';
 import { ProductSpecs } from '@/components/product/product-specs';
 import { findProductBySlug } from '@/lib/repositories/product-repository';
+import { resolveBestDeal } from '@/lib/services/coupon-utils';
 import { formatPrice, timeAgo, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
@@ -126,14 +127,30 @@ export default async function ProductPage({ params }: Props) {
   const rangeMax = uniquePrices.length > 1 ? uniquePrices[uniquePrices.length - 1] : null;
 
   // Lowest current price = cheapest in-stock variant; falls back to any priced
-  // variant, then the cheapest vendor group price.
+  // variant, then the cheapest vendor group price. A vendor coupon that beats
+  // the raw variant price wins instead, so the hero matches the cards.
   const bestVariant = pricedPool.reduce<(typeof pricedPool)[number] | null>(
     (min, v) => (min === null || v.price < min.price ? v : min),
     null,
   );
-  const lowestPrice = bestVariant?.price ?? serializedVendorProducts[0]?.effectivePrice ?? null;
-  const originalPrice =
-    bestVariant?.originalPrice != null && lowestPrice != null && bestVariant.originalPrice > lowestPrice
+  const bestCouponDeal = serializedVendorProducts.reduce<{ price: number; original: number; code: string } | null>(
+    (min, vp) => {
+      const deal = resolveBestDeal(toNum(vp.totalPrice), vp.coupons);
+      if (deal.couponCode == null) return min;
+      if (min == null || deal.finalPrice < min.price) return { price: deal.finalPrice, original: toNum(vp.totalPrice), code: deal.couponCode };
+      return min;
+    },
+    null,
+  );
+  const rawVariantPrice = bestVariant?.price ?? null;
+  const couponWins = bestCouponDeal != null && (rawVariantPrice == null || bestCouponDeal.price < rawVariantPrice);
+  const lowestPrice = couponWins
+    ? bestCouponDeal!.price
+    : rawVariantPrice ?? serializedVendorProducts[0]?.effectivePrice ?? null;
+  const couponCode = couponWins ? bestCouponDeal!.code : null;
+  const originalPrice = couponWins
+    ? bestCouponDeal!.original
+    : bestVariant?.originalPrice != null && lowestPrice != null && bestVariant.originalPrice > lowestPrice
       ? bestVariant.originalPrice
       : null;
   const savings = originalPrice != null && lowestPrice != null ? originalPrice - lowestPrice : null;
@@ -236,6 +253,9 @@ export default async function ProductPage({ params }: Props) {
                         <span className="product-hero-price-original">{formatPrice(originalPrice)}</span>
                       )}
                       <span className="product-hero-price">{formatPrice(toNum(lowestPrice))}</span>
+                      {couponCode && (
+                        <span className="product-hero-coupon">🏷️ {couponCode}</span>
+                      )}
                     </div>
                     {savings != null && savings > 0 && (
                       <span className="product-hero-price-save">

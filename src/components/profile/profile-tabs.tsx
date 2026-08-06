@@ -199,6 +199,7 @@ export function ProfileTabs({
                       lowestPrice: null,
                       originalPrice: null,
                       hasCoupons: false,
+                      couponCode: null,
                       vendorCount: 0,
                       upvotes: 0,
                       downvotes: 0,

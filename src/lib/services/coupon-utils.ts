@@ -74,6 +74,40 @@ export function mergeVendorCoupons(
   return [...vendor, ...product].sort(sortCouponsByPriority);
 }
 
+export interface BestDeal {
+  finalPrice: number;
+  couponCode: string | null;
+}
+
+type DealCoupon = {
+  code: string;
+  discountType: string;
+  discountValue: number;
+  enabled?: boolean;
+  startDate?: Date | string | null;
+  endDate?: Date | string | null;
+  expiryDate?: Date | string | null;
+};
+
+/**
+ * Shared price resolver: the lowest final payable price (regular vs best active
+ * coupon, whichever is lower) plus the winning coupon code. Single source of
+ * truth for every surface that shows a price — listing cards, product hero,
+ * vendor cards, and compare all route through this so they never disagree.
+ */
+export function resolveBestDeal(totalPrice: number, coupons: DealCoupon[], now: Date = new Date()): BestDeal {
+  let best: BestDeal = { finalPrice: totalPrice, couponCode: null };
+  for (const c of coupons) {
+    if (!isCouponActive({ enabled: c.enabled, startDate: c.startDate, endDate: c.endDate ?? c.expiryDate }, now)) continue;
+    let after: number;
+    if (c.discountType === 'percentage') after = Math.round(totalPrice * (1 - c.discountValue / 100));
+    else if (c.discountType === 'flat' || c.discountType === 'fixed') after = totalPrice - c.discountValue;
+    else continue;
+    if (after < best.finalPrice) best = { finalPrice: Math.max(0, after), couponCode: c.code };
+  }
+  return best;
+}
+
 export function validateCoupons(coupons: CouponInput[]): string | null {
   for (const c of coupons) {
     if (!c.code.trim()) return 'Coupon code is required';

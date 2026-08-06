@@ -78,6 +78,7 @@ export interface ProductCard {
   lowestPrice: number | null;
   originalPrice: number | null;
   hasCoupons: boolean;
+  couponCode: string | null;
   vendorCount: number;
   upvotes: number;
   downvotes: number;

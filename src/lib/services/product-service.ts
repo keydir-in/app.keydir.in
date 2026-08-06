@@ -4,6 +4,8 @@
  * listings with filtering, sorting, and user vote enrichment.
  */
 import { computeVoteStats } from '@/lib/vote-utils';
+import { resolveBestDeal } from '@/lib/services/coupon-utils';
+import { toNum } from '@/lib/utils';
 import type { ProductCard } from '@/types';
 import {
   findProductCards,
@@ -82,6 +84,8 @@ export function mapToProductCard(
   userVote?: 'upvote' | 'downvote' | null,
 ): ProductCard {
   const { upvotes, downvotes, approval } = computeVoteStats(p.votes);
+  const featured = p.vendorProducts[0];
+  const deal = featured ? resolveBestDeal(toNum(featured.totalPrice), featured.coupons) : null;
   return {
     id: p.id,
     name: p.name,
@@ -89,9 +93,10 @@ export function mapToProductCard(
     image: p.image,
     brand: p.brand,
     productType: p.productType,
-    lowestPrice: p.vendorProducts[0]?.effectivePrice ?? null,
-    originalPrice: p.vendorProducts[0]?.totalPrice ?? null,
-    hasCoupons: (p.vendorProducts[0]?._count?.coupons ?? 0) > 0,
+    lowestPrice: deal?.finalPrice ?? featured?.effectivePrice ?? null,
+    originalPrice: featured?.totalPrice ?? null,
+    hasCoupons: (featured?._count?.coupons ?? 0) > 0,
+    couponCode: deal?.couponCode ?? null,
     vendorCount: p._count.vendorProducts,
     upvotes,
     downvotes,

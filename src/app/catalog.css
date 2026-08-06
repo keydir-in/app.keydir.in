@@ -1213,6 +1213,18 @@
   text-decoration-color: var(--red);
 }
 
+.product-hero-coupon {
+  font-family: var(--f-m);
+  font-size: var(--fs-badge);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: rgba(250, 204, 21, .9);
+  color: #000;
+}
+
 .product-hero-price-save {
   font-family: var(--f-m);
   font-size: var(--fs-badge);

@@ -61,7 +61,7 @@ export function ProductCard({ product, variant = 'listing', brand, onRemove, rem
       <div className="product-card-img-wrap">
         <ProductCardImage src={product.image} alt={product.name} />
         {product.hasCoupons && (
-          <CouponBadge code="COUPON" />
+          <CouponBadge code={product.couponCode || 'COUPON'} />
         )}
       </div>
       <div className="product-card-body">
