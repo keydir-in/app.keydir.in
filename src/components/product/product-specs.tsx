@@ -15,6 +15,10 @@ function jsonArr(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 }
 
+function jsonRaw(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
 function valStr(v: unknown): string | null {
   if (typeof v === 'string' && v.trim()) return v;
   if (typeof v === 'number') return String(v);
@@ -37,6 +41,29 @@ function valNum(v: unknown): number | null {
     if (!isNaN(n)) return n;
   }
   return null;
+}
+
+function str(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() ? v : null;
+}
+
+function firstStr(v: unknown): string | null {
+  return Array.isArray(v) ? str(v.find((x): x is string => typeof x === 'string')) : null;
+}
+
+function formatSwitchEntry(s: unknown): string | null {
+  if (!s || typeof s !== 'object') return null;
+  const o = s as Record<string, unknown>;
+  const parts = [str(o.brand), str(o.name)].filter(Boolean);
+  if (parts.length) return parts.join(' ');
+  return str(o.type) ?? str(o.notes) ?? null;
+}
+
+function formatKeycapEntry(s: unknown): string | null {
+  if (!s || typeof s !== 'object') return null;
+  const o = s as Record<string, unknown>;
+  const parts = [str(o.profile), firstStr(o.material), firstStr(o.legendType)].filter(Boolean);
+  return parts.length ? parts.join(' ') : null;
 }
 
 function SimpleRow({ label, display }: { label: string; display: string }) {
@@ -65,6 +92,18 @@ function TagsRow({ label, items }: { label: string; items: string[] }) {
       <span className="spec-label">{label}</span>
       <span className="spec-value spec-badges">
         {items.map((v) => <span key={v} className="spec-badge">{v}</span>)}
+      </span>
+    </div>
+  );
+}
+
+function OptionsRow({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="spec-row">
+      <span className="spec-label">{label}</span>
+      <span className="spec-value">
+        {items.map((it) => <div key={it} className="spec-option-line">• {it}</div>)}
       </span>
     </div>
   );
@@ -143,6 +182,22 @@ function renderRow(row: SpecRowDef, spec: Record<string, unknown>): React.ReactN
     case 'boolean': {
       const v = valBool(spec[row.key!]);
       return <SimpleRow key={row.label} label={row.label} display={v ? 'Yes' : 'No'} />;
+    }
+    case 'switch_status': {
+      const v = valBool(spec[row.key!]);
+      return <SimpleRow key={row.label} label={row.label} display={v ? 'Included' : 'Barebone'} />;
+    }
+    case 'switch_options': {
+      const items = jsonRaw(spec[row.key!])
+        .map(formatSwitchEntry)
+        .filter((x): x is string => x !== null);
+      return <OptionsRow key={row.label} label={row.label} items={items} />;
+    }
+    case 'keycap_options': {
+      const items = jsonRaw(spec[row.key!])
+        .map(formatKeycapEntry)
+        .filter((x): x is string => x !== null);
+      return <OptionsRow key={row.label} label={row.label} items={items} />;
     }
     case 'number': {
       const n = valNum(spec[row.key!]);

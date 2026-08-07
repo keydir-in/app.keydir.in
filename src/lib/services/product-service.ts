@@ -32,16 +32,12 @@ export const KEYBOARD_SPEC_CONFIG: SpecFilterConfig = {
   arrayKeys: [
     'keyboardStyle', 'mountingStyle', 'plateMaterial',
     'pcbType', 'connectivity', 'firmware',
-    'switchCompat', 'switchType', 'switchBrand', 'switchModel',
-    'keycapLegendType', 'keycapLegendPlacement',
   ],
   stringKeys: [
     'layout', 'caseMaterial', 'lighting', 'ledOrientation',
-    'keycapMaterial', 'keycapProfile', 'switchStemMaterial', 'switchSpringType',
   ],
   booleanKeys: [
     'flexCuts', 'detachableCable', 'perKeyRgb', 'switchesIncluded',
-    'factoryLubed', 'handLubed', 'switchLongPole', 'switchDustproofStem',
   ],
 };
 

@@ -376,34 +376,9 @@ model KeyboardSpec {
   ledOrientation        String?
   perKeyRgb             Boolean @default(false)
   switchesIncluded      Boolean @default(false)
-  factoryLubed          Boolean @default(false)
-  handLubed             Boolean @default(false)
-  factoryFilmed         Boolean @default(false)
-  breakInProgress       Boolean @default(false)
-  switchCompat          Json?
-  switchType            Json?
-  switchBrand           Json?
-  switchModel           Json?
-  switchOpForce         Float?
-  switchBottomOut       Float?
-  switchPreTravel       Float?
-  switchTotalTravel     Float?
-  switchSpringWeight    Float?
-  switchSpringLength    Float?
-  switchRatedLifetime   Int?
-  switchStemMaterial    String?
-  switchTopHousing      String?
-  switchBottomHousing   String?
-  switchSpringType      String?
-  switchLongPole        Boolean @default(false)
-  switchLedDiffuser     Boolean @default(false)
-  switchDustproofStem   Boolean @default(false)
-  switchLightPipe       Boolean @default(false)
+  switches              Json?
   keycapsIncluded       Boolean @default(false)
-  keycapMaterial        Json?
-  keycapProfile         String?
-  keycapLegendType      Json?
-  keycapLegendPlacement Json?
+  keycaps               Json?
   includedAccessories   Json?
   additionalAccessories String?
   specialFeatures       String?

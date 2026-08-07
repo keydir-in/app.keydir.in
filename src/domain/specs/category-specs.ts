@@ -6,7 +6,8 @@
 export type SpecRowType =
   | 'string' | 'string[]' | 'boolean' | 'number' | 'number_unit'
   | 'colors' | 'tags' | 'bool_badges' | 'feature_badges'
-  | 'perf_grid' | 'materials';
+  | 'perf_grid' | 'materials' | 'switch_status'
+  | 'switch_options' | 'keycap_options';
 
 export interface SpecRowDef {
   type: SpecRowType;
@@ -100,63 +101,14 @@ export const CATEGORY_SPECS: Record<string, CategorySpecConfig> = {
       {
         title: 'Keycaps',
         rows: [
-          { type: 'string[]', label: 'Material', key: 'keycapMaterial' },
-          { type: 'string', label: 'Profile', key: 'keycapProfile' },
-          { type: 'string[]', label: 'Legend Type', key: 'keycapLegendType' },
-          { type: 'string[]', label: 'Legend Placement', key: 'keycapLegendPlacement' },
+          { type: 'keycap_options', label: 'Keycap Options', key: 'keycaps' },
         ],
       },
       {
         title: 'Switches',
         rows: [
-          { type: 'tags', label: 'Type', key: 'switchType' },
-          { type: 'tags', label: 'Compatibility', key: 'switchCompat' },
-          {
-            type: 'bool_badges',
-            label: 'Features',
-            fields: [
-              { label: 'Switches Included', key: 'switchesIncluded' },
-              { label: 'Factory Lubed', key: 'factoryLubed' },
-              { label: 'Hand Lubed', key: 'handLubed' },
-              { label: 'Factory Filmed', key: 'factoryFilmed' },
-              { label: 'Break-in', key: 'breakInProgress' },
-            ],
-          },
-          { type: 'tags', label: 'Brands', key: 'switchBrand' },
-          { type: 'tags', label: 'Models', key: 'switchModel' },
-          {
-            type: 'perf_grid',
-            label: 'Performance',
-            fields: [
-              { label: 'Operating Force', key: 'switchOpForce', unit: ' gf' },
-              { label: 'Bottom-out Force', key: 'switchBottomOut', unit: ' gf' },
-              { label: 'Pre-Travel', key: 'switchPreTravel', unit: ' mm' },
-              { label: 'Total Travel', key: 'switchTotalTravel', unit: ' mm' },
-              { label: 'Spring Weight', key: 'switchSpringWeight', unit: ' gf' },
-              { label: 'Spring Length', key: 'switchSpringLength', unit: ' mm' },
-              { label: 'Rated Lifetime', key: 'switchRatedLifetime', unit: ' Million' },
-            ],
-          },
-          {
-            type: 'materials',
-            label: 'Materials',
-            fields: [
-              { label: 'Stem', key: 'switchStemMaterial' },
-              { label: 'Top Housing', key: 'switchTopHousing' },
-              { label: 'Bottom Housing', key: 'switchBottomHousing' },
-            ],
-          },
-          { type: 'string', label: 'Spring', key: 'switchSpringType' },
-          {
-            type: 'feature_badges',
-            label: 'Switch Features',
-            fields: [
-              { label: 'Long Pole', key: 'switchLongPole' },
-              { label: 'Dustproof Stem', key: 'switchDustproofStem' },
-              { label: 'LED Diffuser', key: 'switchLedDiffuser' },
-              { label: 'Light Pipe', key: 'switchLightPipe' },
-            ],
-          },
+          { type: 'switch_status', label: 'Switches', key: 'switchesIncluded' },
+          { type: 'switch_options', label: 'Switch Options', key: 'switches' },
         ],
       },
       {
