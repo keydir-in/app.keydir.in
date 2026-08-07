@@ -162,6 +162,7 @@ export default async function ProductPage({ params }: Props) {
         price: toNum(ph.price),
         recordedAt: ph.recordedAt,
         vendor: vp.vendor.name,
+        stockStatus: ph.stockStatus,
       }))
     )
     .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime());
@@ -171,6 +172,14 @@ export default async function ProductPage({ params }: Props) {
     if (vp.vendor.chartColor) {
       vendorColors[vp.vendor.name] = vp.vendor.chartColor;
     }
+  }
+
+  const couponByVendor: Record<string, string> = {};
+  for (const vp of serializedVendorProducts) {
+    const active = vp.coupons.find(
+      (c) => c.enabled && (!c.expiryDate || new Date(c.expiryDate) > new Date())
+    );
+    if (active) couponByVendor[vp.vendor.name] = active.code;
   }
 
   const productSchema = {
@@ -369,9 +378,9 @@ export default async function ProductPage({ params }: Props) {
         <ProductTabs
           productType={product.productType}
           spec={product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec}
-          description={product.description}
           history={allHistory}
           vendorColors={vendorColors}
+          coupons={couponByVendor}
         />
       </div>
 

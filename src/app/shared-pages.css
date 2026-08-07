@@ -516,8 +516,10 @@
   .spec-row { flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
   .spec-value { text-align: left; }
   .spec-colors { justify-content: flex-start; }
-  .price-chart-svg { height: 220px; }
-  .price-chart-range-btn { padding: var(--sp-2) var(--sp-3); font-size: 0.6rem; }
+  .price-chart-seg { width: 100%; }
+  .price-chart-seg button { flex: 1; padding: 7px 0; }
+  .pcs-mod { min-width: 86px; padding: 7px 10px; }
+  .pcs-mod--wide { min-width: 140px; }
   .product-hero-collection { grid-template-columns: 1fr; }
 }
 /* ══════════════════════════════════════════

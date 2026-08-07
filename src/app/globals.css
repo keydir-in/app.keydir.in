@@ -117,16 +117,6 @@
 [data-theme="dark"] .product-hero-vote-card { border-color: var(--border); }
 [data-theme="dark"] .product-hero-stats .product-stat-card { background: var(--surface); border-color: var(--border); }
 
-/* ── Price chart ── */
-[data-theme="dark"] .price-chart-container { background: var(--surface); border-color: var(--border); }
-[data-theme="dark"] .price-chart-range-bar { border-bottom-color: var(--border); }
-[data-theme="dark"] .price-chart-range-btn { border-right-color: var(--border-subtle); color: var(--text-dim); }
-[data-theme="dark"] .price-chart-range-btn:hover { background: var(--surface-raised); color: var(--text); }
-[data-theme="dark"] .price-chart-range-btn.active { background: var(--yellow); color: #111; }
-[data-theme="dark"] .price-chart-grid { stroke: var(--border-subtle); }
-[data-theme="dark"] .price-chart-area { fill: rgba(0,255,106,.04); }
-[data-theme="dark"] .price-chart-tooltip { background: var(--dark-card-bg); border-color: var(--border); }
-
 /* ── Profile ── */
 [data-theme="dark"] .profile-hero { background: var(--surface); border-color: var(--border); }
 [data-theme="dark"] .profile-identicon { border-color: var(--border); }

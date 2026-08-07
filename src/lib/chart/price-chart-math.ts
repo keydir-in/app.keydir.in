@@ -1,7 +1,7 @@
 /**
  * Price chart utilities for multi-vendor price history visualization.
  * Provides point formatting, timeline building, vendor grouping, dense series construction, and tooltip data.
- * Exports: PricePoint, FALLBACK_PALETTE, hexToRgba, toDateKey, buildUnifiedTimeline, VendorGroup, buildVendorGroups, DensePoint, buildDenseSeries, segmentDense, TooltipVendor, getTooltipData
+ * Exports: PricePoint, FALLBACK_PALETTE, VENDOR_COLOR_MAP, hexToRgba, toDateKey, buildUnifiedTimeline, VendorGroup, buildVendorGroups, DensePoint, buildDenseSeries, segmentDense, TooltipVendor, getTooltipData
  */
 
 import { toNum } from '@/lib/utils';
@@ -10,11 +10,21 @@ export interface PricePoint {
   price: number;
   recordedAt: Date;
   vendor?: string;
+  stockStatus?: string;
 }
 
 export const FALLBACK_PALETTE = [
-  '#22C55E', '#EAB308', '#EF4444', '#3B82F6', '#A855F7', '#14B8A6', '#F97316',
+  '#00FF6A', '#00E5FF', '#A855F7', '#FAFF00', '#FF3FA4', '#FF6B00', '#3B82F6',
 ];
+
+export const VENDOR_COLOR_MAP: Record<string, string> = {
+  URX: '#00FF6A',
+  XTRO: '#00E5FF',
+  RYUGEAR: '#A855F7',
+  KEYDIR: '#FAFF00',
+  STACKKART: '#3B82F6',
+  GENESIS: '#FF6B00',
+};
 
 export function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -56,7 +66,7 @@ export function buildVendorGroups(
 
   let fallbackIndex = 0;
   return Array.from(map.entries()).map(([vendor, points]) => {
-    const configured = vendorColors[vendor];
+    const configured = vendorColors[vendor] || VENDOR_COLOR_MAP[vendor];
     let hex: string;
     if (configured && /^#[0-9a-fA-F]{6}$/.test(configured)) {
       hex = configured;
@@ -76,6 +86,7 @@ export function buildVendorGroups(
 export interface DensePoint {
   dateIndex: number;
   price: number;
+  stockStatus?: string;
 }
 
 export function buildDenseSeries(
@@ -87,7 +98,7 @@ export function buildDenseSeries(
     const key = toDateKey(new Date(p.recordedAt));
     const idx = dateKeyToIndex.get(key);
     if (idx !== undefined) {
-      dense[idx] = { dateIndex: idx, price: toNum(p.price) };
+      dense[idx] = { dateIndex: idx, price: toNum(p.price), stockStatus: p.stockStatus };
     }
   }
   return dense;
@@ -115,12 +126,14 @@ export interface TooltipVendor {
   price: number;
   color: string;
   y: number;
+  stockStatus?: string;
+  recordedAt?: Date;
 }
 
 export function getTooltipData(
   denseSeries: { vendor: string; dense: (DensePoint | null)[]; color: { line: string } }[],
   dateIndex: number,
-  unifiedDates: number[],
+  date: Date,
   toY: (p: number) => number,
 ): TooltipVendor[] {
   const vendors: TooltipVendor[] = [];
@@ -132,6 +145,8 @@ export function getTooltipData(
         price: pt.price,
         color: s.color.line,
         y: toY(pt.price),
+        stockStatus: pt.stockStatus,
+        recordedAt: date,
       });
     }
   }

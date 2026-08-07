@@ -1,9 +1,8 @@
 'use client';
 
 /**
- * Product detail tabs: Description (with price history side-by-side on
- * desktop), Price History, Specifications (grouped card grid), and
- * placeholder Reviews / Discussions panels.
+ * Product detail tabs: Price History, Specifications (grouped card grid),
+ * and placeholder Reviews / Discussions panels.
  */
 
 import { useState } from 'react';
@@ -14,13 +13,12 @@ import type { PricePoint } from '@/lib/chart/price-chart-math';
 interface Props {
   productType: string;
   spec: Record<string, unknown> | null;
-  description: string | null;
   history: PricePoint[];
   vendorColors: Record<string, string>;
+  coupons?: Record<string, string>;
 }
 
 const TABS = [
-  { id: 'description', label: 'Description' },
   { id: 'history', label: 'Price History' },
   { id: 'specs', label: 'Specifications' },
   { id: 'reviews', label: 'Reviews' },
@@ -29,8 +27,8 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
-export function ProductTabs({ productType, spec, description, history, vendorColors }: Props) {
-  const [active, setActive] = useState<TabId>('description');
+export function ProductTabs({ productType, spec, history, vendorColors, coupons }: Props) {
+  const [active, setActive] = useState<TabId>('history');
 
   return (
     <section className="product-section pt-tabs">
@@ -49,25 +47,9 @@ export function ProductTabs({ productType, spec, description, history, vendorCol
         ))}
       </div>
 
-      {active === 'description' && (
-        <div className="pt-panel pt-panel--desc">
-          <div className="pt-desc-text">
-            <h2 className="pt-panel-title">Description</h2>
-            {description?.trim() ? (
-              <p className="pt-desc-body">{description}</p>
-            ) : (
-              <p className="pt-desc-body pt-desc-empty">No product overview available.</p>
-            )}
-          </div>
-          <div className="pt-desc-chart">
-            <PriceHistoryChart history={history} vendorColors={vendorColors} />
-          </div>
-        </div>
-      )}
-
       {active === 'history' && (
         <div className="pt-panel">
-          <PriceHistoryChart history={history} vendorColors={vendorColors} />
+          <PriceHistoryChart history={history} vendorColors={vendorColors} coupons={coupons} />
         </div>
       )}
 
