@@ -1,29 +1,38 @@
 'use client';
 
 /**
- * Client-side hook managing catalog page filters, sort, and pagination via URL search params.
- * Fetches available filter options, handles price range, and syncs state with the URL.
- * @returns Filter state, handlers, and URL-synced query/sort values.
+ * Client-side hook managing catalog page filters, sort, and pagination via
+ * URL search params. Category config (endpoint, sort default, price bounds)
+ * is derived from @/lib/config/category-config. Price bounds: min comes from
+ * config or filter data; max is dynamic (data max, fallback 100000). Price
+ * filters use `min`/`max` URL keys and are only applied on Apply.
  */
-
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { clamp } from '@/lib/utils';
 import { SORT_OPTIONS, type FilterOptions } from '@/lib/constants';
+import { getCategoryConfig, type CategoryConfig } from '@/lib/config/category-config';
 
 interface CatalogFiltersOpts {
-  filtersEndpoint: string;
-  defaultSort: string;
-  fixedPriceMin?: number;
-  fixedPriceMax?: number;
+  category: CategoryConfig['slug'];
 }
 
-export function useCatalogFilters({
-  filtersEndpoint,
-  defaultSort,
-  fixedPriceMin,
-  fixedPriceMax,
-}: CatalogFiltersOpts) {
+const FALLBACK_MAX = 100000;
+
+function safeFloat(raw: string | null, fallback: number): number {
+  const n = parseFloat(raw ?? '');
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export function useCatalogFilters({ category }: CatalogFiltersOpts) {
+  const config = getCategoryConfig(category);
+  if (!config) throw new Error(`Unknown category: ${category}`);
+
+  const filtersEndpoint = `/api/${category}/filters`;
+  const defaultSort = config.defaultSort;
+  const fixedPriceMin = config.priceMin;
+  const fixedPriceMax = config.priceMax;
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,17 +45,13 @@ export function useCatalogFilters({
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [PRICE_MIN, setPRICE_MIN] = useState(fixedPriceMin ?? 0);
-  const [PRICE_MAX, setPRICE_MAX] = useState(fixedPriceMax ?? Infinity);
-  const [priceMin, setPriceMin] = useState<number>(() => {
-    if (fixedPriceMin != null) return fixedPriceMin;
-    const v = searchParams.get('priceMin');
-    return v ? parseInt(v, 10) : 0;
-  });
-  const [priceMax, setPriceMax] = useState<number>(() => {
-    if (fixedPriceMax != null) return fixedPriceMax;
-    const v = searchParams.get('priceMax');
-    return v ? parseInt(v, 10) : Infinity;
-  });
+  const [PRICE_MAX, setPRICE_MAX] = useState(fixedPriceMax ?? FALLBACK_MAX);
+  const [priceMin, setPriceMin] = useState<number>(() =>
+    fixedPriceMin != null ? fixedPriceMin : safeFloat(searchParams.get('min'), 0),
+  );
+  const [priceMax, setPriceMax] = useState<number>(() =>
+    fixedPriceMax != null ? fixedPriceMax : safeFloat(searchParams.get('max'), FALLBACK_MAX),
+  );
 
   const [pending, setPending] = useState<Record<string, string[]>>(() => {
     const init: Record<string, string[]> = {};
@@ -61,33 +66,47 @@ export function useCatalogFilters({
   const activeCount = Object.values(applied).reduce((n, a) => n + a.length, 0);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(filtersEndpoint)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Filter request failed: ${r.status}`);
+        return r.json();
+      })
       .then((d: FilterOptions) => {
+        if (cancelled) return;
         setFilterOptions(d);
         if (fixedPriceMin == null) {
-          setPRICE_MIN(d.priceMin);
-          setPriceMin((prev) => prev || d.priceMin);
+          const dataMin = d.priceMin ?? 0;
+          setPRICE_MIN(dataMin);
+          setPriceMin((prev) => (prev > dataMin ? prev : dataMin));
         }
         if (fixedPriceMax == null) {
-          setPRICE_MAX(d.priceMax);
-          setPriceMax((prev) => prev || d.priceMax);
+          const dataMax = d.priceMax ?? FALLBACK_MAX;
+          setPRICE_MAX(dataMax);
+          setPriceMax((prev) => (prev < dataMax ? prev : dataMax));
         }
       })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, [filtersEndpoint, fixedPriceMin, fixedPriceMax]);
 
-  const buildUrl = useCallback((s: string, f: Record<string, string[]>, pMin: number, pMax: number, p: number) => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (s !== defaultSort) params.set('sort', s);
-    if (p > 1) params.set('page', String(p));
-    for (const [k, v] of Object.entries(f)) for (const val of v) params.append(k, val);
-    if (pMin > PRICE_MIN) params.set('priceMin', String(pMin));
-    if (pMax < PRICE_MAX) params.set('priceMax', String(pMax));
-    const qs = params.toString();
-    return `${pathname}${qs ? `?${qs}` : ''}`;
-  }, [pathname, q, defaultSort, PRICE_MIN, PRICE_MAX]);
+  const buildUrl = useCallback(
+    (s: string, f: Record<string, string[]>, pMin: number, pMax: number, p: number) => {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (s !== defaultSort) params.set('sort', s);
+      if (p > 1) params.set('page', String(p));
+      for (const [k, v] of Object.entries(f)) {
+        if (k === 'min' || k === 'max') continue;
+        for (const val of v) params.append(k, val);
+      }
+      if (pMin > PRICE_MIN) params.set('min', String(pMin));
+      if (pMax < PRICE_MAX) params.set('max', String(pMax));
+      const qs = params.toString();
+      return `${pathname}${qs ? `?${qs}` : ''}`;
+    },
+    [pathname, q, defaultSort, PRICE_MIN, PRICE_MAX],
+  );
 
   const push = useCallback((s: string, f: Record<string, string[]>, pMin: number, pMax: number, p: number) => {
     router.push(buildUrl(s, f, pMin, pMax, p), { scroll: false });
@@ -107,10 +126,10 @@ export function useCatalogFilters({
 
   function applyAndClose(sort: string, setPage: (p: number) => void) {
     const next = { ...pending };
-    if (priceMin > PRICE_MIN) next.priceMin = [String(priceMin)];
-    else delete next.priceMin;
-    if (priceMax < PRICE_MAX) next.priceMax = [String(priceMax)];
-    else delete next.priceMax;
+    if (priceMin > PRICE_MIN) next.min = [String(priceMin)];
+    else delete next.min;
+    if (priceMax < PRICE_MAX) next.max = [String(priceMax)];
+    else delete next.max;
     setApplied(next);
     setPage(1);
     push(sort, next, priceMin, priceMax, 1);
@@ -126,15 +145,15 @@ export function useCatalogFilters({
   }
 
   function removeFilter(key: string, val: string, sort: string, setPage: (p: number) => void) {
-    if (key === 'priceMin') setPriceMin(PRICE_MIN);
-    if (key === 'priceMax') setPriceMax(PRICE_MAX);
+    if (key === 'min') setPriceMin(PRICE_MIN);
+    if (key === 'max') setPriceMax(PRICE_MAX);
     setApplied((prev) => {
       const u = { ...prev, [key]: (prev[key] || []).filter((v) => v !== val) };
       if (!u[key]?.length) delete u[key];
       setPending(u);
       setPage(1);
-      const pMin = key === 'priceMin' ? PRICE_MIN : priceMin;
-      const pMax = key === 'priceMax' ? PRICE_MAX : priceMax;
+      const pMin = key === 'min' ? PRICE_MIN : priceMin;
+      const pMax = key === 'max' ? PRICE_MAX : priceMax;
       push(sort, u, pMin, pMax, 1);
       return u;
     });
@@ -142,13 +161,17 @@ export function useCatalogFilters({
 
   function handlePriceMinChange(v: number) { setPriceMin(v); }
   function handlePriceMaxChange(v: number) { setPriceMax(v); }
+
   function handlePriceMinInput(v: string) {
-    const n = parseInt(v.replace(/\D/g, ''), 10);
-    if (!isNaN(n)) setPriceMin(clamp(n, PRICE_MIN, priceMax - 100));
+    const n = parseFloat(v.replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(n)) { setPriceMin(PRICE_MIN); return; }
+    setPriceMin(clamp(n, PRICE_MIN, priceMax - 100));
   }
+
   function handlePriceMaxInput(v: string) {
-    const n = parseInt(v.replace(/\D/g, ''), 10);
-    if (!isNaN(n)) setPriceMax(clamp(n, priceMin + 100, PRICE_MAX));
+    const n = parseFloat(v.replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(n)) { setPriceMax(PRICE_MAX); return; }
+    setPriceMax(clamp(n, priceMin + 100, PRICE_MAX));
   }
 
   return {

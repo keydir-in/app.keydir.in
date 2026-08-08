@@ -7,6 +7,8 @@
  * Exports: ContributionCard (default)
  */
 
+import { formatDateShort } from '@/lib/utils';
+
 type Props = {
   id: string;
   type: string;
@@ -48,7 +50,7 @@ export default function ContributionCard({
   disabled,
 }: Props) {
   const label = TYPE_LABELS[type] || type.replace(/_/g, ' ');
-  const date = new Date(createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = formatDateShort(new Date(createdAt));
 
   const lines = (description || '').split('\n');
   const descText = lines.filter(l => !l.startsWith('Ref:')).join('\n').trim();

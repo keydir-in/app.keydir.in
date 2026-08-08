@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { ConnectedAccounts } from '@/components/auth/connected-accounts';
@@ -207,7 +208,7 @@ export default async function SettingsPage({
                     ) : (
                       <>
                         {!hasDiscord && (
-                          <a href="/settings" className="stg-voting-cta">Connect Discord {'\u2192'}</a>
+                          <Link href="/settings" className="stg-voting-cta">Connect Discord {'\u2192'}</Link>
                         )}
                         <div className="stg-voting-preview">
                           <span className="stg-voting-preview-label">Unlock to access:</span>

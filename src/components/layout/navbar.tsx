@@ -15,7 +15,7 @@ import {
   GitCompareArrows, ChevronDown, Keyboard, ToggleRight, CircleDot, Mouse,
   ShoppingCart, BookOpen, Hammer, Layers, Mail, User, Settings, LogOut, X
 } from 'lucide-react';
-import { getCompareCount, getCompareCategory, getCompareTrayItems, onCompareChange, loadCompareFromStorage } from '@/lib/compare-store';
+import { loadCompareFromStorage } from '@/lib/compare-store';
 import Image from 'next/image';
 
 const GlobalSearch = lazy(
@@ -77,14 +77,6 @@ export function Navbar() {
     setCompareCount(stored.products.length);
     setCompareCategory(stored.category);
     setCompareSlugs(stored.products.map((p) => p.slug));
-    return onCompareChange(() => {
-      setCompareCount(getCompareCount());
-      setCompareCategory(getCompareCategory());
-      setCompareSlugs(getCompareTrayItems().map((p) => p.slug));
-    });
-  }, []);
-
-  useEffect(() => {
     getCurrentUser().then((data) => {
       if (data) {
         setUser({

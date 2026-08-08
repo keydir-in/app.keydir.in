@@ -113,9 +113,8 @@ flowchart LR
 
     subgraph API["API Routes"]
         Search["/api/search"]
-        Products["/api/products"]
-        Upload["/api/upload"]
-        Cron["/api/cron/update-prices"]
+        Category["/api/[category]"]
+        Filters["/api/[category]/filters"]
     end
 
     style Public fill:#1a1a2e,stroke:#50e3c2,color:#fff

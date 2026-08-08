@@ -7,11 +7,10 @@
  */
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CompareHeader } from '@/components/compare/compare-header';
 import { CompareContent } from '@/components/compare/compare-content';
 import type { CompareProduct, SpecGroup } from '@/components/compare/compare-types';
-import { syncCompareFromUrl, clearCompareOnUnmount } from '@/lib/compare-store';
 
 interface Props {
   initialSlugs: string[];
@@ -46,11 +45,6 @@ export function CompareClient({
 }: Props) {
   const router = useRouter();
   const [onlyDiff, setOnlyDiff] = useState(false);
-
-  useEffect(() => {
-    syncCompareFromUrl(categoryFilter, initialSlugs);
-    return () => clearCompareOnUnmount();
-  }, [categoryFilter, initialSlugs]);
 
   function updateUrl(slugs: string[]) {
     if (slugs.length === 0) {

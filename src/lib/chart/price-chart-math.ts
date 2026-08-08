@@ -1,7 +1,7 @@
 /**
  * Price chart utilities for multi-vendor price history visualization.
  * Provides point formatting, timeline building, vendor grouping, dense series construction, and tooltip data.
- * Exports: PricePoint, FALLBACK_PALETTE, VENDOR_COLOR_MAP, hexToRgba, toDateKey, buildUnifiedTimeline, VendorGroup, buildVendorGroups, DensePoint, buildDenseSeries, segmentDense, TooltipVendor, getTooltipData
+ * Exports: PricePoint, buildUnifiedTimeline, buildVendorGroups, buildDenseSeries, segmentDense, getTooltipData.
  */
 
 import { toNum } from '@/lib/utils';
@@ -13,11 +13,11 @@ export interface PricePoint {
   stockStatus?: string;
 }
 
-export const FALLBACK_PALETTE = [
+const FALLBACK_PALETTE = [
   '#00FF6A', '#00E5FF', '#A855F7', '#FAFF00', '#FF3FA4', '#FF6B00', '#3B82F6',
 ];
 
-export const VENDOR_COLOR_MAP: Record<string, string> = {
+const VENDOR_COLOR_MAP: Record<string, string> = {
   URX: '#00FF6A',
   XTRO: '#00E5FF',
   RYUGEAR: '#A855F7',
@@ -26,14 +26,14 @@ export const VENDOR_COLOR_MAP: Record<string, string> = {
   GENESIS: '#FF6B00',
 };
 
-export function hexToRgba(hex: string, alpha: number): string {
+function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-export function toDateKey(d: Date): number {
+function toDateKey(d: Date): number {
   const dt = new Date(d);
   dt.setHours(0, 0, 0, 0);
   return dt.getTime();
@@ -47,7 +47,7 @@ export function buildUnifiedTimeline(history: PricePoint[]): number[] {
   return Array.from(dateSet).sort((a, b) => a - b);
 }
 
-export interface VendorGroup {
+interface VendorGroup {
   vendor: string;
   points: PricePoint[];
   color: { line: string; area: string };
@@ -83,7 +83,7 @@ export function buildVendorGroups(
   });
 }
 
-export interface DensePoint {
+interface DensePoint {
   dateIndex: number;
   price: number;
   stockStatus?: string;
@@ -121,7 +121,7 @@ export function segmentDense(dense: (DensePoint | null)[]): DensePoint[][] {
   return segments;
 }
 
-export interface TooltipVendor {
+interface TooltipVendor {
   vendor: string;
   price: number;
   color: string;

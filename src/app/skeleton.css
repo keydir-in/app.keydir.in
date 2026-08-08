@@ -64,10 +64,6 @@
   border-radius: var(--rad);
 }
 
-.skeleton-chip {
-  border-radius: var(--rad);
-}
-
 /* Profile product card skeleton */
 .profile-product-card .skeleton-img {
   aspect-ratio: 1;
@@ -84,21 +80,6 @@
   padding: var(--sp-4);
 }
 
-/* Admin editor skeleton */
-.pe-nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-3);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.pe-section {
-  padding: var(--sp-4);
-  border: var(--bd-thick);
-  background: var(--surface);
-}
-
 /* Search skeleton */
 .nav-search-item {
   display: flex;
@@ -108,13 +89,6 @@
 }
 
 .nav-search-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* Filter skeleton */
-.kb-explorer-chips-col {
   display: flex;
   flex-direction: column;
   gap: 4px;

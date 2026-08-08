@@ -92,7 +92,7 @@ export function VendorRow({ vendorProduct: vp }: VendorRowProps) {
   );
   const hasVariants = variants.length > 0;
   const lowestVariant = hasVariants ? pickLowestVariant(variants) : null;
-  const allCoupons = (vp.coupons ?? []).filter((c) => c.enabled);
+  const allCoupons = (vp.coupons ?? []).filter((c) => isCouponActive({ enabled: c.enabled, endDate: c.expiryDate }));
   const bestCoupon = getBestCoupon(allCoupons, toNum(vp.totalPrice));
   const extraCount = allCoupons.length - 1;
   const hasFreeShipping = allCoupons.some((c) => c.discountType === 'free_shipping');

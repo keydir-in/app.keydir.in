@@ -10,6 +10,7 @@ import TruckElectricIcon from '@/components/product/truck-electric-icon';
 import CurrencyRupeeIcon from '@/components/product/currency-rupee-icon';
 import ScanBarcodeIcon from '@/components/product/scan-barcode-icon';
 import type { AnimatedIconHandle } from '@/components/product/types';
+import { formatDateShort } from '@/lib/utils';
 import { formatPrice } from '@/lib/utils';
 
 interface Props {
@@ -77,7 +78,7 @@ export function ProductHeroStats({ vendorCount, rangeMin, rangeMax, lastUpdated 
         <div className="product-stat-info">
           <div className="product-stat-value">
             {lastUpdated
-              ? lastUpdated.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
+              ? formatDateShort(lastUpdated).toUpperCase()
               : '—'}
           </div>
           <div className="product-stat-label">Last Updated</div>

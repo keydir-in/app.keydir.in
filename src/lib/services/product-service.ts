@@ -1,7 +1,8 @@
 /**
- * Product business logic layer. Builds category-specific spec filter configs,
- * maps DB results to ProductCard views, and provides paginated product
- * listings with filtering, sorting, and user vote enrichment.
+ * Product business logic layer. Maps DB results to ProductCard views and
+ * provides paginated product listings with filtering, sorting, and user
+ * vote enrichment. Category-specific configs live in
+ * `@/lib/config/category-config`.
  */
 import { computeVoteStats } from '@/lib/vote-utils';
 import { resolveBestDeal } from '@/lib/services/coupon-utils';
@@ -24,54 +25,6 @@ import {
 } from '@/lib/services/spec-filter-builder';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-
-// ═══ CATEGORY SPEC CONFIGS ═══
-
-export const KEYBOARD_SPEC_CONFIG: SpecFilterConfig = {
-  specRelationKey: 'keyboardSpec',
-  arrayKeys: [
-    'keyboardStyle', 'mountingStyle', 'plateMaterial',
-    'pcbType', 'connectivity', 'firmware',
-  ],
-  stringKeys: [
-    'layout', 'caseMaterial', 'lighting', 'ledOrientation',
-  ],
-  booleanKeys: [
-    'flexCuts', 'detachableCable', 'perKeyRgb', 'switchesIncluded',
-  ],
-};
-
-export const SWITCH_SPEC_CONFIG: SpecFilterConfig = {
-  specRelationKey: 'switchSpec',
-  arrayKeys: ['switchCompat', 'switchType', 'switchBrand', 'switchModel'],
-  stringKeys: ['switchStemMaterial', 'switchTopHousing', 'switchBottomHousing', 'switchSpringType'],
-  booleanKeys: [
-    'factoryLubed', 'handLubed', 'factoryFilmed', 'breakInProgress',
-    'switchLongPole', 'switchLedDiffuser', 'switchDustproofStem', 'switchLightPipe',
-  ],
-};
-
-export const KEYCAP_SPEC_CONFIG: SpecFilterConfig = {
-  specRelationKey: 'keycapSpec',
-  arrayKeys: [
-    'keycapProfile', 'keycapLayoutSupport', 'keycapMaterial', 'keycapManufacturing',
-    'keycapLegends', 'keycapLegendPlacement', 'keycapLanguage', 'keycapKeyCount',
-    'keycapStemCompat', 'keycapManufacturer',
-  ],
-  stringKeys: ['keycapThickness', 'keycapColorway', 'keycapDesigner'],
-  booleanKeys: ['keycapNovelties', 'keycapSpacebars', 'keycapAccentKeys', 'keycapArtisan'],
-};
-
-export const MOUSE_SPEC_CONFIG: SpecFilterConfig = {
-  specRelationKey: 'mouseSpec',
-  arrayKeys: ['mouseConnection', 'mousePollingRate', 'mouseGripType', 'mouseCompatibility', 'mouseAccessories'],
-  stringKeys: [
-    'mouseSensor', 'mouseShape', 'mouseHandOrientation', 'mouseSize',
-    'mouseSwitches', 'mouseEncoder', 'mouseScrollWheel', 'mouseChargingPort',
-    'mouseFeet', 'mouseShellMaterial', 'mouseColor', 'mouseWarranty', 'mouseLod',
-  ],
-  booleanKeys: ['mouseRgb', 'mouseSoftwareRequired', 'mouseOnboardMemory'],
-};
 
 // ═══ CARD MAPPING ═══
 
@@ -112,8 +65,10 @@ export async function fetchProductListings(
   options?: { defaultSort?: SortOption; includeUserVotes?: boolean; pageSize?: number },
 ): Promise<{ products: ProductCard[]; total: number; page: number; pageSize: number; totalPages: number }> {
   const sort = (searchParams.get('sort') || options?.defaultSort || 'popular') as SortOption;
-  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || String(options?.pageSize || DEFAULT_PAGE_SIZE), 10), 100);
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const parsedSize = Number.parseInt(searchParams.get('pageSize') || String(options?.pageSize || DEFAULT_PAGE_SIZE), 10);
+  const pageSize = Number.isFinite(parsedSize) ? Math.min(Math.max(parsedSize, 1), 100) : DEFAULT_PAGE_SIZE;
+  const parsedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+  const page = Number.isFinite(parsedPage) ? Math.max(parsedPage, 1) : 1;
   const skip = (page - 1) * pageSize;
   const brands = searchParams.getAll('brand');
 

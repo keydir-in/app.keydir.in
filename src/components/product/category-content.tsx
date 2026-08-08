@@ -2,79 +2,99 @@
 
 /**
  * Category page content wrapper that manages filtering, sorting, and
- * product listing via custom hooks. Composes Navbar, HeroBanner,
- * FilterPanel, ProductCards, Pagination, and Footer into a complete
- * catalog page.
+ * product listing via custom hooks. Category config is resolved from
+ * @/lib/config/category-config; a viewport check picks the desktop sidebar
+ * or mobile drawer for the shared filter panel.
  */
-
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
 import { Footer } from '@/components/layout/footer';
 import { ProductCard } from '@/components/product/product-card';
 import { EmptyCategory } from '@/components/product/empty-category';
 import { HeroBanner } from '@/components/banner/hero-banner';
-import FilterPanel from '@/components/product/filter-panel';
+import FilterSidebar from '@/components/product/filter-sidebar';
+import FilterDrawer from '@/components/product/filter-drawer';
 import { Pagination } from '@/components/ui/pagination';
 import { ProductGridSkeleton } from '@/components/skeleton';
 import { SORT_OPTIONS, type Banner } from '@/lib/constants';
 import type { SortOption } from '@/types';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useProductListing } from '@/hooks/use-product-listing';
+import { getCategoryConfig, type CategoryConfig } from '@/lib/config/category-config';
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [query]);
+
+  return matches;
+}
 
 interface CategoryContentProps {
-  productType: string;
-  displayName: string;
-  emptyIcon: string;
-  filtersEndpoint: string;
-  productsEndpoint: string;
-  defaultSort?: SortOption;
-  priceMin?: number;
-  priceMax?: number;
+  category: CategoryConfig['slug'];
   banners?: Banner[];
   totalCount?: number;
 }
 
-export function CategoryContent({
-  productType,
-  displayName,
-  emptyIcon,
-  filtersEndpoint,
-  productsEndpoint,
-  defaultSort = 'popular',
-  priceMin: fixedPriceMin,
-  priceMax: fixedPriceMax,
-  banners = [],
-  totalCount = 0,
-}: CategoryContentProps) {
-  const filters = useCatalogFilters({
-    filtersEndpoint,
-    defaultSort,
-    fixedPriceMin,
-    fixedPriceMax,
-  });
+export function CategoryContent({ category, banners = [], totalCount = 0 }: CategoryContentProps) {
+  const config = getCategoryConfig(category);
+  if (!config) throw new Error(`Unknown category: ${category}`);
 
-  const { products, total, page, setPage, totalPages, loading } = useProductListing({
-    productsEndpoint,
+  const filters = useCatalogFilters({ category });
+
+  const { products, total, page, setPage, totalPages, loading, error, retry } = useProductListing({
+    category,
     q: filters.q,
     sort: filters.sort as SortOption,
     applied: filters.applied,
   });
 
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
+  const filterProps = {
+    pending: filters.pending,
+    applied: filters.applied,
+    priceMin: filters.priceMin,
+    priceMax: filters.priceMax,
+    PRICE_MIN: filters.PRICE_MIN,
+    PRICE_MAX: filters.PRICE_MAX,
+    onToggle: filters.toggleOption,
+    onRemove: (k: string, v: string) => filters.removeFilter(k, v, filters.sort, setPage),
+    onApply: () => filters.applyAndClose(filters.sort, setPage),
+    onReset: () => filters.resetAndClose(filters.sort, setPage),
+    onPriceMinChange: filters.handlePriceMinChange,
+    onPriceMaxChange: filters.handlePriceMaxChange,
+    onPriceMinInputChange: filters.handlePriceMinInput,
+    onPriceMaxInputChange: filters.handlePriceMaxInput,
+    onClose: () => filters.setFiltersOpen(false),
+    isOpen: filters.filtersOpen,
+  };
+
   const sortLabel = SORT_OPTIONS.find((o) => o.value === filters.sort)?.label || 'Lowest Price';
+  const showSkeleton = loading && products.length === 0;
 
   return (
     <div className="catalog-layout">
       <Navbar />
-      <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{displayName}</h1>
+      <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{config.displayName}</h1>
       {banners.length > 0 && <HeroBanner banners={banners} />}
       <div className="catalog-page">
         {totalCount === 0 ? (
-          <EmptyCategory category={displayName} />
+          <EmptyCategory category={config.displayName} />
         ) : (
           <>
             <div className="catalog-toolbar">
               <div className="catalog-stats">
-                <span>{total} {displayName}{displayName.endsWith('s') ? '' : 's'}</span>
+                <span>{total} {config.displayName}</span>
                 <span className="catalog-stats-sep">·</span>
                 <span>Sorted by {sortLabel}</span>
               </div>
@@ -84,27 +104,7 @@ export function CategoryContent({
                   <span>Filters</span>
                   {filters.activeCount > 0 && <span className="catalog-filter-count">{filters.activeCount}</span>}
                 </button>
-                {filters.filtersOpen && filters.filterOptions && (
-                  <FilterPanel
-                    filterOptions={filters.filterOptions}
-                    pending={filters.pending}
-                    applied={filters.applied}
-                    priceMin={filters.priceMin}
-                    priceMax={filters.priceMax}
-                    PRICE_MIN={filters.PRICE_MIN}
-                    PRICE_MAX={filters.PRICE_MAX}
-                    onToggle={filters.toggleOption}
-                    onRemove={(k, v) => filters.removeFilter(k, v, filters.sort, setPage)}
-                    onApply={() => filters.applyAndClose(filters.sort, setPage)}
-                    onReset={() => filters.resetAndClose(filters.sort, setPage)}
-                    onPriceMinChange={filters.handlePriceMinChange}
-                    onPriceMaxChange={filters.handlePriceMaxChange}
-                    onPriceMinInputChange={filters.handlePriceMinInput}
-                    onPriceMaxInputChange={filters.handlePriceMaxInput}
-                    onClose={() => filters.setFiltersOpen(false)}
-                    isOpen={filters.filtersOpen}
-                  />
-                )}
+                {filters.filtersOpen && (isMobile ? <FilterDrawer {...filterProps} /> : <FilterSidebar {...filterProps} />)}
                 <select value={filters.sort} onChange={(e) => { filters.handleSortChange(e.target.value, setPage); }} className="catalog-sort-select catalog-sort-desktop" aria-label="Sort products">
                   {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -112,16 +112,23 @@ export function CategoryContent({
                   {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
-          </div>
+            </div>
 
-            {loading ? (
+            {error ? (
+              <div className="catalog-empty">
+                <div className="catalog-empty-icon">⚠️</div>
+                <div className="catalog-empty-title">Something went wrong</div>
+                <p className="catalog-empty-desc">{error}</p>
+                <button type="button" onClick={retry} className="btn-secondary">Try Again</button>
+              </div>
+            ) : showSkeleton ? (
               <div className="catalog-product-area">
                 <ProductGridSkeleton count={12} />
               </div>
             ) : products.length === 0 ? (
               <div className="catalog-empty">
-                <div className="catalog-empty-icon">{emptyIcon}</div>
-                <div className="catalog-empty-title">No {displayName} Found</div>
+                <div className="catalog-empty-icon">{config.emptyIcon}</div>
+                <div className="catalog-empty-title">No {config.displayName} Found</div>
                 <p className="catalog-empty-desc">Try adjusting your search or filters.</p>
                 <button type="button" onClick={() => filters.resetAndClose(filters.sort, setPage)} className="btn-secondary">Clear Filters</button>
               </div>
@@ -139,7 +146,7 @@ export function CategoryContent({
         )}
       </div>
 
-      <SubmitProductCTA productType={productType} />
+      <SubmitProductCTA productType={config.submitType} />
 
       <Footer />
     </div>

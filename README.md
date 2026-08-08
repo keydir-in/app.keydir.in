@@ -127,19 +127,14 @@ app.keydir.in/
 ├── src/
 │   ├── proxy.ts             # Next.js 16 proxy (auth guard)
 │   ├── app/                 # Next.js App Router pages
-│   │   ├── admin/           # Admin dashboard pages
-│   │   ├── api/             # API route handlers
+│   │   ├── [category]/      # Catalog pages (keyboards, keycaps, switches, mouse)
+│   │   ├── api/             # API route handlers ([category], [category]/filters, search)
 │   │   ├── auth/            # Authentication pages
-│   │   ├── keyboards/       # Keyboard catalog
-│   │   ├── switches/        # Switch catalog
-│   │   ├── keycaps/         # Keycap catalog
-│   │   ├── mouse/           # Mouse catalog
 │   │   ├── products/        # Product detail pages
 │   │   ├── compare/         # Comparison tool
 │   │   ├── profile/         # User profiles
 │   │   └── settings/        # User settings
 │   ├── components/          # React components
-│   │   ├── admin/           # Admin-specific components
 │   │   ├── product/         # Product display components
 │   │   ├── compare/         # Comparison components
 │   │   ├── banner/          # Banner display components
@@ -149,16 +144,14 @@ app.keydir.in/
 │   │   ├── layout/          # Layout components (navbar, footer)
 │   │   └── shared/          # Shared utility components
 │   ├── lib/                 # Server-side logic
+│   │   ├── config/          # Category configuration (single source of truth)
 │   │   ├── admin/           # Admin server actions
 │   │   ├── services/        # Business logic services
 │   │   ├── repositories/    # Data access layer
-│   │   ├── scraper/         # Scraper engine
 │   │   ├── chart/           # Chart math utilities
 │   │   ├── supabase/        # Supabase client factories
 │   │   ├── prisma.ts        # Prisma singleton
 │   │   └── utils.ts         # Shared utilities
-│   ├── domain/              # Domain layer
-│   │   └── specs/           # Category spec configurations
 │   ├── hooks/               # Custom React hooks
 │   └── types/               # TypeScript type definitions
 ├── docs/                    # Project documentation

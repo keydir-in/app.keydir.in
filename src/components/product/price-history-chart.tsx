@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { formatPrice, toNum, formatDate } from '@/lib/utils';
+import { formatPrice, toNum, formatDate, formatDateShort } from '@/lib/utils';
 import {
   buildUnifiedTimeline, buildVendorGroups, buildDenseSeries, segmentDense, getTooltipData,
   type PricePoint,
@@ -279,7 +279,7 @@ export function PriceHistoryChart({ history, vendorColors = {}, coupons = {} }: 
           <span className="pcs-label">UPDATED</span>
           <span className="pcs-value pcs-value--date">
             {summary.updated
-              ? summary.updated.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
+              ? formatDateShort(new Date(summary.updated)).toUpperCase()
               : '—'}
           </span>
         </div>
