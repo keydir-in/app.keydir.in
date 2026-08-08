@@ -49,12 +49,12 @@ export function ProductPageSkeleton() {
       </div>
 
       <div className="spec-groups">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="spec-group">
-            <div className="spec-group-header">
-              <SkeletonRectangle width={100} height={12} />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="spec-module">
+            <div className="spec-module-head">
+              <SkeletonRectangle width={120} height={12} />
             </div>
-            <div className="spec-group-body">
+            <div className="spec-module-body">
               {Array.from({ length: 4 }).map((_, j) => (
                 <div key={j} className="spec-row">
                   <SkeletonRectangle width={120} height={12} />

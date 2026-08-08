@@ -5,6 +5,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { VendorRow } from '@/components/product/vendor-row';
 import { ProductHeroCommunity } from '@/components/product/product-hero-community';
+import { ProductHeroStats } from '@/components/product/product-hero-stats';
 import { BookmarkButton } from '@/components/product/bookmark-button';
 import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
 import { ProductGallery } from '@/components/product/product-gallery';
@@ -15,9 +16,6 @@ import { formatPrice, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
 import { prisma } from '@/lib/prisma';
-import { CalendarDays } from 'lucide-react';
-import CurrencyRupeeIcon from '@/components/product/currency-rupee-icon';
-import TruckElectricIcon from '@/components/product/truck-electric-icon';
 import type { Metadata } from 'next';
 
 export const revalidate = 300;
@@ -95,11 +93,15 @@ export default async function ProductPage({ params }: Props) {
   }));
 
   let userVote: 'upvote' | 'downvote' | null = null;
+  let inCollection = false;
   if (currentUser) {
     const voteItem = await prisma.vote.findUnique({
       where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
     });
     userVote = (voteItem?.type as 'upvote' | 'downvote') || null;
+    inCollection = !!(await prisma.collection.findUnique({
+      where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
+    }));
   }
 
   const { upvotes, downvotes } = computeVoteStats(product.votes);
@@ -251,7 +253,7 @@ export default async function ProductPage({ params }: Props) {
                     )}
                     <h1 className="product-hero-name">{product.name}</h1>
                   </div>
-                  <BookmarkButton />
+                  <BookmarkButton productId={product.id} initialSaved={inCollection} />
                 </div>
 
                 {lowestPrice && (
@@ -306,53 +308,12 @@ export default async function ProductPage({ params }: Props) {
         </section>
 
         {/* ═══ HERO STATS ═══ */}
-        <div className="product-hero-stats">
-          <div className="product-stat-card">
-            <div className="product-stat-icon">
-              <TruckElectricIcon size={20} strokeWidth={2} />
-            </div>
-            <div className="product-stat-info">
-              <div className="product-stat-value">{vendorCount}</div>
-              <div className="product-stat-label">Vendors Available</div>
-            </div>
-          </div>
-          <div className="product-stat-card">
-            <div className="product-stat-icon">
-              <CurrencyRupeeIcon size={20} strokeWidth={2} />
-            </div>
-            <div className="product-stat-info">
-              <div className="product-stat-value">
-                {rangeMin ? (
-                  <div className="product-stat-price-row">
-                    <span>{formatPrice(rangeMin)}</span>
-                    {rangeMax && rangeMax !== rangeMin && (
-                      <>
-                        <span className="product-stat-arrow">→</span>
-                        <span className="product-stat-value-alt">{formatPrice(rangeMax)}</span>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  '—'
-                )}
-              </div>
-              <div className="product-stat-label">Price Range</div>
-            </div>
-          </div>
-          <div className="product-stat-card">
-            <div className="product-stat-icon">
-              <CalendarDays size={20} strokeWidth={2} />
-            </div>
-            <div className="product-stat-info">
-              <div className="product-stat-value">
-                {lastUpdated
-                  ? lastUpdated.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
-                  : '—'}
-              </div>
-              <div className="product-stat-label">Last Updated</div>
-            </div>
-          </div>
-        </div>
+        <ProductHeroStats
+          vendorCount={vendorCount}
+          rangeMin={rangeMin}
+          rangeMax={rangeMax}
+          lastUpdated={lastUpdated}
+        />
 
         {/* ═══ AVAILABLE VENDORS ═══ */}
         <section className="product-section">

@@ -9,9 +9,11 @@
  * components remain available for the future comparison system.
  */
 
+import { useRef } from 'react';
 import { useProductVote } from '@/hooks/use-product-vote';
 import ArrowBigDownIcon from '@/components/product/arrow-big-down-icon';
 import ArrowBigUpIcon from '@/components/product/arrow-big-up-icon';
+import type { AnimatedIconHandle } from '@/components/product/types';
 
 interface Props {
   productId: string;
@@ -29,6 +31,8 @@ export function ProductHeroCommunity({
   showVoting = true,
 }: Props) {
   const { upvotes, downvotes, userVote, loading, handleVote, votingLocked } = useProductVote(productId, initUp, initDown, initVote);
+  const upArrowRef = useRef<AnimatedIconHandle>(null);
+  const downArrowRef = useRef<AnimatedIconHandle>(null);
 
   return (
     <div className="product-hero-community">
@@ -43,13 +47,18 @@ export function ProductHeroCommunity({
           <div className="product-hero-vote-cards">
             <button
               className={`product-hero-vote-card up ${userVote === 'upvote' ? 'active' : ''}`}
-              onClick={() => handleVote('upvote')}
+              onClick={() => {
+                handleVote('upvote');
+                upArrowRef.current?.startAnimation();
+              }}
+              onMouseEnter={() => upArrowRef.current?.startAnimation()}
+              onMouseLeave={() => upArrowRef.current?.stopAnimation()}
               disabled={loading || votingLocked}
               title={votingLocked ? 'Voting is locked' : undefined}
             >
               <div className="product-hero-vote-row">
                 <span className="product-hero-vote-arrow">
-                  <ArrowBigUpIcon size={14} strokeWidth={2} />
+                  <ArrowBigUpIcon ref={upArrowRef} size={14} strokeWidth={2} />
                 </span>
                 <span className="product-hero-vote-number">{upvotes}</span>
               </div>
@@ -58,13 +67,18 @@ export function ProductHeroCommunity({
 
             <button
               className={`product-hero-vote-card down ${userVote === 'downvote' ? 'active' : ''}`}
-              onClick={() => handleVote('downvote')}
+              onClick={() => {
+                handleVote('downvote');
+                downArrowRef.current?.startAnimation();
+              }}
+              onMouseEnter={() => downArrowRef.current?.startAnimation()}
+              onMouseLeave={() => downArrowRef.current?.stopAnimation()}
               disabled={loading || votingLocked}
               title={votingLocked ? 'Voting is locked' : undefined}
             >
               <div className="product-hero-vote-row">
                 <span className="product-hero-vote-arrow">
-                  <ArrowBigDownIcon size={14} strokeWidth={2} />
+                  <ArrowBigDownIcon ref={downArrowRef} size={14} strokeWidth={2} />
                 </span>
                 <span className="product-hero-vote-number">{downvotes}</span>
               </div>

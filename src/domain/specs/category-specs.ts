@@ -52,24 +52,33 @@ export const CATEGORY_SPECS: Record<string, CategorySpecConfig> = {
           { type: 'string[]', label: 'Style', key: 'keyboardStyle' },
           { type: 'string', label: 'Case Material', key: 'caseMaterial' },
           { type: 'string[]', label: 'Surface Finish', key: 'surfaceFinish' },
-          { type: 'colors', label: 'Colors', key: 'colors' },
           { type: 'number_unit', label: 'Weight', key: 'weight', unit: 'g' },
+        ],
+      },
+      {
+        title: 'Dimensions',
+        rows: [
           { type: 'number_unit', label: 'Length', key: 'lengthMm', unit: 'mm' },
           { type: 'number_unit', label: 'Width', key: 'widthMm', unit: 'mm' },
-          { type: 'number_unit', label: 'Height', key: 'heightMm', unit: 'mm' },
+          { type: 'number_unit', label: 'Front Height', key: 'frontHeightMm', unit: 'mm' },
+          { type: 'number_unit', label: 'Rear Height', key: 'rearHeightMm', unit: 'mm' },
           { type: 'number_unit', label: 'Typing Angle', key: 'typingAngle', unit: '°' },
         ],
       },
       {
-        title: 'Mounting',
+        title: 'Mounting & Internals',
         rows: [
           { type: 'string[]', label: 'Mounting Style', key: 'mountingStyle' },
           { type: 'string[]', label: 'Plate Material', key: 'plateMaterial' },
           { type: 'string[]', label: 'Stabilizers', key: 'stabilizerCompat' },
           { type: 'string[]', label: 'Stabilizer Layout', key: 'stabilizerLayout' },
+        ],
+      },
+      {
+        title: 'Foam Configuration',
+        rows: [
           { type: 'string[]', label: 'Foam Material', key: 'foamMaterial' },
           { type: 'string[]', label: 'Foam Placement', key: 'foamPlacement' },
-          { type: 'boolean', label: 'Flex Cuts', key: 'flexCuts' },
         ],
       },
       {
@@ -79,6 +88,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpecConfig> = {
           { type: 'number_unit', label: 'Thickness', key: 'pcbThickness', unit: 'mm' },
           { type: 'number_unit', label: 'Polling Rate', key: 'pollingRate', unit: 'Hz' },
           { type: 'boolean', label: 'NKRO', key: 'nkro' },
+          { type: 'boolean', label: 'Flex Cuts', key: 'flexCuts' },
           { type: 'number_unit', label: 'Battery', key: 'batteryCapacity', unit: 'mAh' },
         ],
       },
@@ -87,7 +97,12 @@ export const CATEGORY_SPECS: Record<string, CategorySpecConfig> = {
         rows: [
           { type: 'string[]', label: 'Type', key: 'connectivity' },
           { type: 'boolean', label: 'Detachable Cable', key: 'detachableCable' },
-          { type: 'string[]', label: 'Firmware', key: 'firmware' },
+        ],
+      },
+      {
+        title: 'Firmware',
+        rows: [
+          { type: 'string[]', label: 'Supported', key: 'firmware' },
         ],
       },
       {

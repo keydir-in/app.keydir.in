@@ -107,9 +107,6 @@
 [data-theme="dark"] .vendor-row { background: var(--surface); border-color: var(--border); color: var(--text); }
 
 /* ── Product page ── */
-[data-theme="dark"] .spec-group { background: var(--surface); border-color: var(--border); }
-[data-theme="dark"] .spec-group-header { background: var(--surface-raised); border-bottom-color: var(--border); }
-[data-theme="dark"] .spec-row { border-bottom-color: var(--border-subtle); }
 [data-theme="dark"] .spec-empty { background: var(--surface); border-color: var(--border); }
 /* ── Product page ── */
 [data-theme="dark"] .product-hero-panel::before,

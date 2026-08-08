@@ -1055,6 +1055,11 @@
   border: 1px solid var(--border-subtle);
   background: var(--surface);
   gap: 24px;
+  transition: border-color var(--dur-fast);
+}
+
+.card-contribution:hover {
+  border-color: var(--border);
 }
 
 .card-contribution-left {

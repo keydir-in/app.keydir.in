@@ -353,10 +353,11 @@ model KeyboardSpec {
   surfaceFinish         Json?
   colors                Json?
   weight                Int?
-  lengthMm              Int?
-  widthMm               Int?
-  heightMm              Int?
-  typingAngle           Int?
+  lengthMm              Float?
+  widthMm               Float?
+  frontHeightMm         Float?
+  rearHeightMm          Float?
+  typingAngle           Float?
   mountingStyle         Json?
   plateMaterial         Json?
   stabilizerCompat      Json?
