@@ -49,20 +49,24 @@ export async function ensureProfile() {
   return profile;
 }
 
-export async function getProfileByUsername(username: string) {
+async function _getProfileByUsername(username: string) {
   return prisma.profile.findUnique({
     where: { username },
     include: {
       collection: {
         include: {
           product: {
-            include: {
+            // The profile-variant ProductCard only renders
+            // slug/name/image/brand/productType — no price is shown for
+            // owned items, so the old `include` (all Product columns) plus
+            // a nested vendorProducts price lookup per item was pure overhead.
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              image: true,
+              productType: true,
               brand: { select: { name: true } },
-              vendorProducts: {
-                select: { effectivePrice: true },
-                orderBy: { effectivePrice: 'asc' },
-                take: 1,
-              },
             },
           },
         },
@@ -72,6 +76,11 @@ export async function getProfileByUsername(username: string) {
     },
   });
 }
+
+// cache() dedupes concurrent same-username lookups within one request
+// (mirrors getCurrentUserAndProfile below) — zero-cost guard against a
+// future duplicate call.
+export const getProfileByUsername = cache(_getProfileByUsername);
 
 export async function getCurrentUser() {
   const { profile } = await getCurrentUserAndProfile();

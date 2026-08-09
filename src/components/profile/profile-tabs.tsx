@@ -9,7 +9,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { removeFromCollection } from '@/lib/profile/actions';
 import { ProductCard } from '@/components/product/product-card';
 import ContributionCard from '@/components/profile/contribution-card';
@@ -83,6 +83,8 @@ const TABS = [
   { id: 'activity', label: 'ACTIVITY' },
 ] as const;
 
+type TabId = (typeof TABS)[number]['id'];
+
 export function ProfileTabs({
   activeTab,
   profileUsername,
@@ -100,10 +102,31 @@ export function ProfileTabs({
   const router = useRouter();
   const [removing, setRemoving] = useState<string | null>(null);
 
-  const current = TABS.find((t) => t.id === activeTab)?.id || 'collection';
+  // Local tab state, seeded from the server-rendered `tab` search param so
+  // deep links / refresh still land on the right tab. Tab clicks update this
+  // state directly instead of navigating — the page already passes every
+  // tab's data as props, so a router.push() would just re-run all the page's
+  // Prisma queries for data we already have.
+  const [current, setCurrent] = useState<TabId>(
+    () => TABS.find((t) => t.id === activeTab)?.id || 'collection'
+  );
 
-  function switchTab(id: string) {
-    router.push(`/profile/${profileUsername}?tab=${id}`);
+  // Keep in sync if `activeTab` changes via a real navigation (shared link,
+  // browser back/forward). Our own clicks never touch this prop.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrent(TABS.find((t) => t.id === activeTab)?.id || 'collection');
+  }, [activeTab]);
+
+  function switchTab(id: TabId) {
+    setCurrent(id);
+    // Update the URL without going through Next's router. page.tsx reads
+    // searchParams, so router.push()/replace() re-fetches the RSC payload
+    // and re-runs every Prisma query — for data we already have. A plain
+    // history update keeps the URL shareable/refreshable at zero network cost.
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', id);
+    window.history.replaceState(null, '', url.toString());
   }
 
   async function handleRemove(id: string) {

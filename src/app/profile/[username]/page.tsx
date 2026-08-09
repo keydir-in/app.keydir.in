@@ -65,25 +65,48 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     if (!profile) notFound();
   }
 
-  const currentUser = await getCurrentUser();
-  const isOwner = currentUser?.userId === profile.userId;
-
-  const votes = await prisma.vote.findMany({
-    where: { profileId: profile.id },
-    select: { id: true, type: true, createdAt: true, product: { select: { id: true, name: true, slug: true, image: true, brand: { select: { name: true } }, vendorProducts: { select: { effectivePrice: true }, orderBy: { effectivePrice: 'asc' }, take: 1 } } } },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const contributions = await prisma.contribution.findMany({
-    where: { profileId: profile.id, status: 'APPROVED' },
-    orderBy: { createdAt: 'desc' },
-    include: { approvedBy: { select: { username: true } } },
-  });
-
-  const [userXpRecord, userBadgesResult] = await Promise.all([
+  // None of these depend on each other's result — only on profile.id/userId,
+  // which we already have. Fetching them together makes the page wait for the
+  // single slowest query instead of the sum of all five.
+  const [currentUser, votes, contributions, userXpRecord, userBadgesResult] = await Promise.all([
+    getCurrentUser(),
+    prisma.vote.findMany({
+      where: { profileId: profile.id },
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        // The Activity tab only renders slug/name/brand per vote — the old
+        // query also pulled `image` and a nested vendorProducts price lookup
+        // per vote that nothing ever displayed.
+        product: {
+          select: {
+            name: true,
+            slug: true,
+            brand: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.contribution.findMany({
+      where: { profileId: profile.id, status: 'APPROVED' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        description: true,
+        xpAwarded: true,
+        status: true,
+        createdAt: true,
+        approvedBy: { select: { username: true } },
+      },
+    }),
     prisma.userXP.findUnique({ where: { profileId: profile.id } }),
     getUserBadges(profile.id),
   ]);
+  const isOwner = currentUser?.userId === profile.userId;
   const xp = userXpRecord?.xp || 0;
   const rank = getRank(xp);
   const communityBadge = userBadgesResult?.find((ub) => ub.badge.type === 'community');
