@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/admin/admin-auth';
 import { XP_VALUES, getRank, getBadgePriority } from '@/lib/reputation';
+import { SYSTEM_BADGES } from '@/lib/reputation/system-badges';
 import type { ContributionType } from '@prisma/client';
 
 // ═══ HELPERS ═══
@@ -23,27 +24,10 @@ async function ensureUserXP(profileId: string) {
 
 // ═══ SYSTEM BADGES ═══
 
-const SYSTEM_BADGES = [
-  { slug: 'community-member', name: 'Community Member', type: 'community', sortOrder: 0, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'vendor', name: 'Vendor', type: 'community', sortOrder: 1, icon: '🏪', bgColor: '#00FF88', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'builder', name: 'Builder', type: 'community', sortOrder: 2, icon: '🔧', bgColor: '#00CCFF', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'moderator', name: 'Moderator', type: 'community', sortOrder: 3, icon: '🛡️', bgColor: '#AA00FF', textColor: '#FFFFFF', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'developer', name: 'Developer', type: 'community', sortOrder: 4, icon: '💻', bgColor: '#FF6600', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'verified-store', name: 'Verified Store', type: 'community', sortOrder: 5, icon: '✅', bgColor: '#00FF88', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'staff', name: 'Staff', type: 'community', sortOrder: 6, icon: '⭐', bgColor: '#FFD700', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'sponsor', name: 'Sponsor', type: 'community', sortOrder: 7, icon: '💎', bgColor: '#FF3366', textColor: '#FFFFFF', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'rank-newbie', name: 'Newbie', type: 'rank', sortOrder: 10, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 0 },
-  { slug: 'rank-member', name: 'Member', type: 'rank', sortOrder: 11, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 50 },
-  { slug: 'rank-enthusiast', name: 'Enthusiast', type: 'rank', sortOrder: 12, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 150 },
-  { slug: 'rank-contributor', name: 'Contributor', type: 'rank', sortOrder: 13, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 400 },
-  { slug: 'rank-trusted-contributor', name: 'Trusted Contributor', type: 'rank', sortOrder: 14, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 800 },
-  { slug: 'rank-expert', name: 'Expert', type: 'rank', sortOrder: 15, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 1500 },
-  { slug: 'rank-veteran', name: 'Veteran', type: 'rank', sortOrder: 16, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 3000 },
-  { slug: 'rank-elite', name: 'Elite', type: 'rank', sortOrder: 17, icon: '', bgColor: '#FAFF00', textColor: '#111111', borderColor: '#111111', xpRequired: 6000 },
-];
-
 let _badgesSeeded = false;
 
+// Safety net for DBs where the deploy-time seed (prisma/seed.ts) hasn't run.
+// Self-healing once per cold instance; never called from the profile read path.
 export async function ensureSystemBadges() {
   if (_badgesSeeded) return;
 
@@ -163,8 +147,8 @@ export async function getProfileRank(profileId: string) {
 }
 
 export async function getUserBadges(profileId: string) {
-  await ensureSystemBadges();
-
+  // Badges are seeded once at deploy time (prisma/seed.ts) — no seeding on
+  // the read path. ensureSystemBadges() is only an admin/deploy safety net.
   const userBadges = await prisma.userBadge.findMany({
     where: { profileId },
     include: { badge: true },

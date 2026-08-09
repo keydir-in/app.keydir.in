@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { SYSTEM_BADGES } from '../src/lib/reputation/system-badges';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -238,6 +239,25 @@ async function main() {
         },
       });
     }
+  }
+
+  // System badges (idempotent — safe to re-run)
+  for (const b of SYSTEM_BADGES) {
+    await prisma.badge.upsert({
+      where: { slug: b.slug },
+      update: { xpRequired: b.xpRequired, type: b.type },
+      create: {
+        slug: b.slug,
+        name: b.name,
+        type: b.type,
+        sortOrder: b.sortOrder,
+        icon: b.icon || null,
+        bgColor: b.bgColor,
+        textColor: b.textColor,
+        borderColor: b.borderColor,
+        xpRequired: b.xpRequired,
+      },
+    });
   }
 
   console.log('Seed complete!');
