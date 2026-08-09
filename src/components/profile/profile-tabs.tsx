@@ -24,21 +24,18 @@ interface CollectionItem {
     brand: { name: string } | null;
     productType: string;
   };
-  createdAt: Date;
+  createdAt: string;
 }
 
 interface VoteItem {
   id: string;
   type: string;
   product: {
-    id: string;
     name: string;
     slug: string;
-    image: string | null;
     brand: { name: string } | null;
-    productType: string;
   };
-  createdAt: Date;
+  createdAt: string;
 }
 
 interface ContributionItem {

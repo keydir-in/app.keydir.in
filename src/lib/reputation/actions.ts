@@ -46,6 +46,17 @@ let _badgesSeeded = false;
 
 export async function ensureSystemBadges() {
   if (_badgesSeeded) return;
+
+  // Cheap existence check instead of unconditionally running the upsert
+  // transaction on every cold start (the module flag resets each one).
+  const existing = await prisma.badge.count({
+    where: { slug: { in: SYSTEM_BADGES.map((b) => b.slug) } },
+  });
+  if (existing === SYSTEM_BADGES.length) {
+    _badgesSeeded = true;
+    return;
+  }
+
   await prisma.$transaction(
     SYSTEM_BADGES.map((b) =>
       prisma.badge.upsert({

@@ -51,6 +51,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params;
   const { edit, tab } = await searchParams;
 
+  // No dependency on `profile` — start it now so its round trip overlaps
+  // with the profile lookup below instead of running after it.
+  const currentUserPromise = getCurrentUser();
+
   let profile = await getProfileByUsername(username);
 
   if (!profile) {
@@ -69,7 +73,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   // which we already have. Fetching them together makes the page wait for the
   // single slowest query instead of the sum of all five.
   const [currentUser, votes, contributions, userXpRecord, userBadgesResult] = await Promise.all([
-    getCurrentUser(),
+    currentUserPromise,
     prisma.vote.findMany({
       where: { profileId: profile.id },
       select: {
@@ -246,15 +250,37 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             activeTab={tab || 'collection'}
             profileUsername={profile.username}
             isOwner={isOwner}
-            collection={JSON.parse(JSON.stringify(profile.collection))}
-            votes={JSON.parse(JSON.stringify(votes))}
+            collection={profile.collection.map((c) => ({
+              id: c.id,
+              createdAt: c.createdAt.toISOString(),
+              product: c.product,
+            }))}
+            votes={votes.map((v) => ({
+              id: v.id,
+              type: v.type,
+              createdAt: v.createdAt.toISOString(),
+              product: v.product,
+            }))}
             voteCredits={profile.voteCredits}
             memberSince={profile.createdAt.getFullYear()}
             rank={rank}
             reputation={xp}
             communityRole={communityRole}
-            profile={JSON.parse(JSON.stringify(profile))}
-            contributions={JSON.parse(JSON.stringify(contributions))}
+            profile={{
+              id: profile.id,
+              displayName: profile.displayName,
+              bio: profile.bio,
+              github: profile.github,
+              discord: profile.discord,
+              reddit: profile.reddit,
+              monkeytype: profile.monkeytype,
+              website: profile.website,
+            }}
+            contributions={contributions.map((c) => ({
+              ...c,
+              createdAt: c.createdAt.toISOString(),
+              approvedBy: c.approvedBy,
+            }))}
           />
         </div>
       </div>
