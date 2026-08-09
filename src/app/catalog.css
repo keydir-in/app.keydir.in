@@ -3036,6 +3036,22 @@
   z-index: 2;
 }
 
+.product-card-drop-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-family: var(--f-m);
+  font-size: .6rem;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--green);
+  color: #111;
+  z-index: 2;
+}
+
 .product-card-img-fallback {
   display: flex;
   align-items: center;
@@ -4349,17 +4365,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Load More / infinite scroll ── */
-.catalog-load-more {
-  display: flex;
-  justify-content: center;
-  padding: 28px 0 8px;
-}
-
-.catalog-load-sentinel {
-  height: 1px;
-}
-
 @keyframes card-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -4996,7 +5001,7 @@
    ══════════════════════════════════════════ */
 .hero-grid {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   align-items: center;
   gap: 60px;
   padding: 60px 0;
@@ -5015,10 +5020,10 @@
   background: var(--border);
   border: 3px solid var(--border);
   box-shadow: var(--sh-xl);
-  padding: 24px;
+  padding: 28px;
   font-family: var(--f-m);
-  font-size: .82rem;
-  line-height: 2;
+  font-size: .875rem;
+  line-height: 1.5;
   color: var(--green);
 }
 
@@ -5042,6 +5047,8 @@
 .terminal .t-dot:nth-child(3) { background: #28C840; }
 
 .terminal .t-line { display: flex; gap: 8px; }
+.terminal .t-line, .terminal .t-dim { margin-bottom: 6px; }
+.terminal .t-line:last-child, .terminal .t-dim:last-child { margin-bottom: 0; }
 .terminal .t-prompt { color: #444; }
 .terminal .t-ok { color: var(--green); }
 .terminal .t-dim { color: #333; }

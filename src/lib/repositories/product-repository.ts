@@ -121,6 +121,51 @@ export async function findTrendingProducts() {
   });
 }
 
+/**
+ * Finds products whose latest recorded price is lower than the last price
+ * that differed from it (i.e. the price dropped at some point in the window).
+ * Returns the biggest drop per product, sorted by drop size descending.
+ */
+export async function findRecentPriceDrops(
+  days = 14,
+  take = 10,
+): Promise<Array<{ productId: string; oldPrice: number; newPrice: number }>> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  // ponytail: pull recent history and diff in JS — fine at directory scale;
+  // move to a window-function SQL query if history exceeds ~50k rows/window.
+  const history = await prisma.priceHistory.findMany({
+    where: { recordedAt: { gte: since }, price: { gt: 0 } },
+    orderBy: { recordedAt: 'desc' },
+    take: 10000,
+    select: {
+      price: true,
+      vendorProduct: { select: { id: true, productId: true, stockStatus: true } },
+    },
+  });
+
+  const perVendor = new Map<string, { productId: string; latest: number; old: number | null }>();
+  for (const h of history) {
+    const vp = h.vendorProduct;
+    if (vp.stockStatus !== 'in_stock' && vp.stockStatus !== 'preorder') continue;
+    const entry = perVendor.get(vp.id);
+    if (!entry) perVendor.set(vp.id, { productId: vp.productId, latest: h.price, old: null });
+    else if (entry.old === null && h.price !== entry.latest) entry.old = h.price;
+  }
+
+  const bestByProduct = new Map<string, { oldPrice: number; newPrice: number }>();
+  for (const { productId, latest, old } of perVendor.values()) {
+    if (old === null || old <= latest) continue;
+    const drop = old - latest;
+    const cur = bestByProduct.get(productId);
+    if (!cur || drop > cur.oldPrice - cur.newPrice) bestByProduct.set(productId, { oldPrice: old, newPrice: latest });
+  }
+
+  return [...bestByProduct.entries()]
+    .map(([productId, d]) => ({ productId, ...d }))
+    .sort((a, b) => b.oldPrice - b.newPrice - (a.oldPrice - a.newPrice))
+    .slice(0, take);
+}
+
 type SpecDelegate = {
   findMany(args: { where: { product: { productType: string } }; select: Record<string, boolean> }): Promise<Record<string, unknown>[]>;
 };

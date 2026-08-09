@@ -131,6 +131,10 @@ export async function register(formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string;
   const username = formData.get('username') as string;
 
+  if (formData.get('consent') !== 'true') {
+    redirect('/auth/register?error=' + encodeURIComponent('You must agree to the Terms of Service and Privacy Policy before creating an account'));
+  }
+
   if (password !== confirmPassword) {
     redirect('/auth/register?error=' + encodeURIComponent('Passwords do not match'));
   }
@@ -176,6 +180,8 @@ export async function register(formData: FormData) {
         username,
         displayName: username,
         registrationComplete: true,
+        consentAccepted: true,
+        consentVersion: 'v1',
       },
     });
     await supabase.auth.updateUser({
@@ -455,6 +461,10 @@ export async function completeOAuthRegistration(formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string;
   const emailField = formData.get('email') as string | null;
 
+  if (formData.get('consent') !== 'true') {
+    redirect('/auth/complete-registration?error=' + encodeURIComponent('You must agree to the Terms of Service and Privacy Policy before completing your account'));
+  }
+
   if (!username || !/^[a-z0-9_]{3,20}$/.test(username)) {
     redirect('/auth/complete-registration?error=' + encodeURIComponent('Username must be 3-20 characters: lowercase letters, numbers, or underscores'));
   }
@@ -494,6 +504,8 @@ export async function completeOAuthRegistration(formData: FormData) {
         username,
         displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? username,
         registrationComplete: true,
+        consentAccepted: true,
+        consentVersion: 'v1',
       },
     });
   } catch (dbErr) {

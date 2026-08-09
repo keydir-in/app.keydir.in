@@ -177,6 +177,12 @@
 .auth-btn-tight { margin-top: 24px; }
 .auth-gap { margin-top: 28px; }
 
+.auth-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ── Social buttons layout ── */
 .auth-social { display: flex; gap: 12px; }
 .auth-social form { flex: 1; }
@@ -338,6 +344,18 @@
   cursor: pointer;
   font-family: var(--f-m);
 }
+
+.auth-consent-check { align-items: flex-start; }
+
+.auth-consent-check label { line-height: 1.5; }
+
+.auth-consent-check label a {
+  color: var(--yellow);
+  text-decoration: none;
+  font-weight: var(--fw-bold);
+}
+
+.auth-consent-check label a:hover { text-decoration: underline; }
 
 /* ══════════════════════════════════════════
    FORGOT PASSWORD LINK

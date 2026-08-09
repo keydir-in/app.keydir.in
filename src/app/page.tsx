@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { HeroBanner } from '@/components/banner/hero-banner';
 import { LowestPrices } from '@/components/product/lowest-prices';
+import { PriceDrops } from '@/components/product/price-drops';
 import { prisma } from '@/lib/prisma';
 import { getBannersForLocation } from '@/lib/admin/banner-actions';
 
@@ -82,23 +83,30 @@ async function HeroStats({ promise }: { promise: Promise<ProductTypeCount[]> }) 
   );
 }
 
-async function HeroTerminal({ promise }: { promise: Promise<ProductTypeCount[]> }) {
-  const productTypeCounts = await promise;
+async function HeroTerminal({
+  promise,
+  meta,
+}: {
+  promise: Promise<ProductTypeCount[]>;
+  meta: Promise<[number, number]>;
+}) {
+  const [productTypeCounts, [brandCount, vendorCount]] = await Promise.all([promise, meta]);
   const totalProducts = productTypeCounts.reduce((sum, c) => sum + c._count, 0);
 
   return (
-    <div className="hero-right" style={{ animation: 'fade-up .7s .15s ease both' }}>
+    <div className="w-full max-w-[21.6rem] min-w-0" style={{ animation: 'fade-up .7s .15s ease both' }}>
       <div className="terminal">
         <div className="t-bar">
           <div className="t-dot" />
           <div className="t-dot" />
           <div className="t-dot" />
-          <span style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginLeft: '8px' }}>keydir_status.sh</span>
+          <span style={{ fontSize: '.82rem', color: 'var(--text-muted)', marginLeft: '8px' }}>keydir_status.sh</span>
         </div>
         <div className="t-line"><span className="t-prompt">$</span><span>./directory --info</span></div>
         <div className="t-line"><span className="t-ok">✓</span><span>product_db: ONLINE</span></div>
         <div className="t-line"><span className="t-ok">✓</span><span>products: {totalProducts}</span></div>
-        <div className="t-line"><span className="t-ok">✓</span><span>community: ACTIVE</span></div>
+        <div className="t-line"><span className="t-ok">✓</span><span>brands: {brandCount}</span></div>
+        <div className="t-line"><span className="t-ok">✓</span><span>vendors: {vendorCount}</span></div>
         <div className="t-dim">──────────────────</div>
         <div className="t-line"><span className="t-warn">▲</span><span>region: INDIA 🇮🇳</span></div>
         <div className="t-line"><span className="t-warn">▲</span><span>updated: DAILY</span></div>
@@ -127,13 +135,13 @@ function StatsFallback() {
 
 function TerminalFallback() {
   return (
-    <div className="hero-right" style={{ animation: 'fade-up .7s .15s ease both' }}>
+    <div className="w-full max-w-[21.6rem] min-w-0" style={{ animation: 'fade-up .7s .15s ease both' }}>
       <div className="terminal">
         <div className="t-bar">
           <div className="t-dot" />
           <div className="t-dot" />
           <div className="t-dot" />
-          <span style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginLeft: '8px' }}>keydir_status.sh</span>
+          <span style={{ fontSize: '.82rem', color: 'var(--text-muted)', marginLeft: '8px' }}>keydir_status.sh</span>
         </div>
         <div className="t-dim">Loading...</div>
       </div>
@@ -175,41 +183,46 @@ async function FeaturesSection({ promise }: { promise: Promise<ProductTypeCount[
 export default async function HomePage() {
   const countsPromise = prisma.product.groupBy({ by: ['productType'], _count: true });
   const bannersPromise = getBannersForLocation('home');
+  const metaPromise = Promise.all([prisma.brand.count(), prisma.vendor.count()]);
 
   return (
     <>
       <main className="page-hero">
-        <div className="hero-grid">
-          <div className="hero-left">
-            <div className="hero-eyebrow">
-              <span className="dot" /> SYSTEM_ONLINE // INDIA_KEYBOARD_DB_v2
+        <div className="max-w-7xl mx-auto px-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6 lg:gap-10 items-center">
+            <div className="max-w-2xl text-left mt-6 min-w-0">
+              <div className="hero-eyebrow w-fit max-w-full inline-flex items-center">
+                <span className="dot" /> SYSTEM_ONLINE // INDIA_KEYBOARD_DB_v2
+              </div>
+
+              <h1 className="page-hero-title" style={{ animation: 'fade-up .65s .08s ease both' }}>
+                INDIA<br />
+                MECHANICAL<br />
+                <span className="outline">KEYBOARD</span><br />
+                DIRECTORY.
+              </h1>
+
+              <p className="page-hero-sub" style={{ animation: 'fade-up .65s .16s ease both' }}>
+                Discover mechanical keyboards, switches, keycaps, mice, and more from Indian vendors. Compare prices,
+                specifications, availability, and historical pricing — all in one place.
+              </p>
+
+              <div className="hero-actions">
+                <Link href="/keyboards" className="btn-primary">Browse Keyboards →</Link>
+                <a href="#deals" className="btn-secondary">Recent Additions</a>
+              </div>
+
+              <Suspense fallback={<StatsFallback />}>
+                <HeroStats promise={countsPromise} />
+              </Suspense>
             </div>
 
-            <h1 className="page-hero-title" style={{ animation: 'fade-up .65s .08s ease both' }}>
-              INDIA<br />
-              MECHANICAL<br />
-              <span className="outline">KEYBOARD</span><br />
-              DIRECTORY.
-            </h1>
-
-            <p className="page-hero-sub" style={{ animation: 'fade-up .65s .16s ease both' }}>
-              Discover mechanical keyboards, switches, keycaps, mice, and more from Indian vendors. Compare prices,
-              specifications, availability, and historical pricing — all in one place.
-            </p>
-
-            <div className="hero-actions">
-              <Link href="/keyboards" className="btn-primary">Browse Keyboards →</Link>
-              <a href="#deals" className="btn-secondary">Recent Additions</a>
+            <div className="flex justify-start lg:justify-center lg:-ml-6 min-w-0">
+              <Suspense fallback={<TerminalFallback />}>
+                <HeroTerminal promise={countsPromise} meta={metaPromise} />
+              </Suspense>
             </div>
-
-            <Suspense fallback={<StatsFallback />}>
-              <HeroStats promise={countsPromise} />
-            </Suspense>
           </div>
-
-          <Suspense fallback={<TerminalFallback />}>
-            <HeroTerminal promise={countsPromise} />
-          </Suspense>
         </div>
       </main>
 
@@ -229,6 +242,13 @@ export default async function HomePage() {
         <Suspense fallback={null}>
           <FeaturesSection promise={countsPromise} />
         </Suspense>
+
+        {/* Price Drops */}
+        <section style={{ marginTop: '4rem', paddingBottom: '3rem' }}>
+          <Suspense fallback={null}>
+            <PriceDrops />
+          </Suspense>
+        </section>
 
         {/* Recent Additions */}
         <section id="deals" style={{ paddingBottom: '48px' }}>

@@ -11,6 +11,7 @@ import { memo } from 'react';
 import { ProductCardImage } from '@/components/shared/product-card-image';
 import { CouponBadge } from '@/components/shared/coupon-badge';
 import { PriceDisplay } from '@/components/shared/price-display';
+import { formatPrice } from '@/lib/utils';
 import ArrowBigUpIcon from '@/components/product/arrow-big-up-icon';
 import type { ProductCard as ProductCardType } from '@/types';
 
@@ -21,9 +22,10 @@ interface ProductCardProps {
   onRemove?: (id: string) => void;
   removing?: boolean;
   collectionItemId?: string;
+  drop?: { amount: number; percent: number } | null;
 }
 
-export const ProductCard = memo(function ProductCard({ product, variant = 'listing', brand, onRemove, removing, collectionItemId }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, variant = 'listing', brand, onRemove, removing, collectionItemId, drop }: ProductCardProps) {
   if (variant === 'profile') {
     return (
       <div className="profile-product-card">
@@ -66,6 +68,11 @@ export const ProductCard = memo(function ProductCard({ product, variant = 'listi
         <ProductCardImage src={product.image} alt={product.name} />
         {product.hasCoupons && (
           <CouponBadge code={product.couponCode || 'COUPON'} />
+        )}
+        {drop && (
+          <span className="product-card-drop-badge">
+            ↓ {drop.percent}% · {formatPrice(drop.amount)}
+          </span>
         )}
       </div>
       <div className="product-card-body">

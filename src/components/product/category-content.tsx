@@ -6,7 +6,7 @@
  * @/lib/config/category-config; a viewport check picks the desktop sidebar
  * or mobile drawer for the shared filter panel.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
 import { ProductCard } from '@/components/product/product-card';
 import { EmptyCategory } from '@/components/product/empty-category';
@@ -14,6 +14,7 @@ import { HeroBanner } from '@/components/banner/hero-banner';
 import FilterSidebar from '@/components/product/filter-sidebar';
 import FilterDrawer from '@/components/product/filter-drawer';
 import { ProductGridSkeleton, ProductCardSkeleton } from '@/components/skeleton';
+import { Pagination } from '@/components/ui/pagination';
 import { SORT_OPTIONS, type Banner } from '@/lib/constants';
 import type { SortOption } from '@/types';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
@@ -48,27 +49,12 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
 
   const filters = useCatalogFilters({ category });
 
-  const { products, total, setPage, pageSize, loading, hasMore, error, retry, loadMore } = useProductListing({
+  const { products, total, setPage, pageSize, loading, error, retry, page, totalPages } = useProductListing({
     category,
     q: filters.q,
     sort: filters.sort as SortOption,
     applied: filters.applied,
   });
-
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasMore) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) loadMore();
-      },
-      { rootMargin: '400px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore, loading, loadMore]);
 
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -135,7 +121,7 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
               </div>
             ) : showSkeleton ? (
               <div className="catalog-product-area">
-                <ProductGridSkeleton count={25} />
+                <ProductGridSkeleton count={pageSize} />
               </div>
             ) : products.length === 0 ? (
               <div className="catalog-empty">
@@ -154,14 +140,7 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
                     <ProductCardSkeleton key={`skeleton-${i}`} />
                   ))}
                 </div>
-                {hasMore && (
-                  <div className="catalog-load-more">
-                    <button type="button" className="btn-secondary" onClick={loadMore} disabled={loading}>
-                      {loading ? 'Loading…' : 'Load More'}
-                    </button>
-                  </div>
-                )}
-                {hasMore && <div ref={sentinelRef} aria-hidden="true" className="catalog-load-sentinel" />}
+                <Pagination page={page} totalPages={totalPages} />
               </div>
             )}
           </>

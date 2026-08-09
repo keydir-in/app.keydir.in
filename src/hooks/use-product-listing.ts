@@ -6,13 +6,14 @@
  * product per line); this hook parses it incrementally and appends products
  * to the grid as they arrive, so the top products paint first instead of
  * waiting for the full page. Caches page responses in a small LRU so
- * revisiting a page or toggling filters doesn't refetch. Exposes loadMore
- * for infinite-scroll / "Load More" UX; a fresh query (q/sort/filters
- * changed) replaces the grid, while a page advance appends to it.
+ * revisiting a page or toggling filters doesn't refetch. Page is driven by
+ * the `page` URL search param; navigating to a page replaces the grid.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { ProductCard, SortOption } from '@/types';
 import type { CategoryConfig } from '@/lib/config/category-config';
+import { useGridColumns } from '@/hooks/use-grid-columns';
 
 interface ProductListingOpts {
   category: CategoryConfig['slug'];
@@ -36,6 +37,8 @@ interface StreamMeta {
 }
 
 const DEFAULT_PAGE_SIZE = 25;
+
+const ROWS_PER_PAGE = 5;
 
 // ponytail: module-level LRU, fine for a single catalog browsing session;
 // swap for a shared store if other pages need the same cache.
@@ -78,28 +81,33 @@ async function readStreamed(
 }
 
 export function useProductListing({ category, q, sort, applied }: ProductListingOpts) {
+  const columns = useGridColumns();
+  const pageSize = columns * ROWS_PER_PAGE;
   const productsEndpoint = `/api/${category}`;
+  const searchParams = useSearchParams();
+  const rawPage = Number.parseInt(searchParams.get('page') || '1', 10);
+  const pageFromUrl = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  const [page, setPage] = useState(pageFromUrl);
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
-  const queryRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(pageFromUrl);
+  }, [pageFromUrl]);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
-      const queryKey = JSON.stringify([category, q, sort, applied]);
-      const freshQuery = queryKey !== queryRef.current;
-      queryRef.current = queryKey;
-
       const p = new URLSearchParams();
       if (q) p.set('q', q);
       p.set('sort', sort);
       p.set('page', String(targetPage));
+      p.set('pageSize', String(pageSize));
       for (const [k, v] of Object.entries(applied)) {
         if (k === 'min') p.set('priceMin', v[0]);
         else if (k === 'max') p.set('priceMax', v[0]);
@@ -113,14 +121,9 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
 
       const cached = responseCache.get(url);
       if (cached) {
-        if (freshQuery || targetPage === 1) {
-          setProducts(cached.products);
-          setTotal(cached.total);
-          setTotalPages(cached.totalPages);
-          setPageSize(cached.pageSize);
-        } else {
-          setProducts((prev) => [...prev, ...cached.products]);
-        }
+        setProducts(cached.products);
+        setTotal(cached.total);
+        setTotalPages(cached.totalPages);
         setError(null);
         setLoading(false);
         return;
@@ -143,13 +146,12 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
           meta = m;
           setTotal(m.total);
           setTotalPages(m.totalPages);
-          setPageSize(m.pageSize);
           setPage(m.page);
         };
         const onProducts = (batch: ProductCard[]) => {
           if (seq !== requestSeq.current) return;
           collected.push(...batch);
-          if (targetPage === 1 && !replaced) {
+          if (!replaced) {
             replaced = true;
             setProducts(batch);
           } else {
@@ -178,7 +180,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
         if (seq === requestSeq.current) setLoading(false);
       }
     },
-    [productsEndpoint, category, q, sort, applied],
+    [productsEndpoint, q, sort, applied, pageSize],
   );
 
   useEffect(() => {
@@ -188,10 +190,13 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
     return () => controller?.abort();
   }, [fetchPage, page]);
 
-  const loadMore = useCallback(() => {
-    if (loading) return;
-    setPage((prev) => (prev < totalPages ? prev + 1 : prev));
-  }, [loading, totalPages]);
+  const prevColumns = useRef(columns);
+  useEffect(() => {
+    if (prevColumns.current !== columns) {
+      prevColumns.current = columns;
+      setPage(1);
+    }
+  }, [columns]);
 
   const retry = useCallback(() => {
     fetchPage(page);
@@ -205,9 +210,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
     totalPages,
     pageSize,
     loading,
-    hasMore: page < totalPages,
     error,
     retry,
-    loadMore,
   };
 }

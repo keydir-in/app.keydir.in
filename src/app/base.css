@@ -166,23 +166,24 @@ body {
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   background: var(--border);
   color: var(--yellow);
   font-family: var(--f-m);
   font-size: .75rem;
   font-weight: 700;
-  padding: 7px 16px;
-  border: 2px solid var(--border);
+  padding: 7px 14px;
+  border: 1px solid var(--border);
   margin-bottom: 2rem;
-  letter-spacing: .08em;
+  letter-spacing: .15em;
   text-transform: uppercase;
+  opacity: .7;
   animation: fade-up .6s ease both;
 }
 
 .hero-eyebrow .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background: var(--green);
   border-radius: 50%;
   flex-shrink: 0;

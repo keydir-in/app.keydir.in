@@ -14,6 +14,7 @@ import {
   getUserVotes,
   findBestDeals,
   findTrendingProducts,
+  findRecentPriceDrops,
   findProductCardsSortedByPrice,
   type ProductWithRelations,
 } from '@/lib/repositories/product-repository';
@@ -113,12 +114,38 @@ export async function fetchProductListings(
 // ═══ HOME PAGE SECTION HELPERS ═══
 
 export async function fetchLowestPrices() {
-  const products = await findProductCards({}, { createdAt: 'desc' }, 10);
-  return products.map((p) => mapToProductCard(p, null));
+  const productTypes = ['keyboards', 'switches', 'keycaps', 'mouse'];
+  const perType = await Promise.all(
+    productTypes.map((productType) =>
+      findProductCards({ productType }, { createdAt: 'desc' }, 10),
+    ),
+  );
+  const merged = perType
+    .flat()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return merged.map((p) => mapToProductCard(p, null));
 }
 
 export async function fetchBestDeals() {
   return findBestDeals();
+}
+
+/**
+ * Products with a recent price drop, rendered as cards where originalPrice is
+ * the pre-drop price and lowestPrice the new price.
+ */
+export async function fetchPriceDrops(take = 10): Promise<ProductCard[]> {
+  const drops = await findRecentPriceDrops(14, take);
+  if (drops.length === 0) return [];
+  const products = await findProductCards({ id: { in: drops.map((d) => d.productId) } }, {}, drops.length);
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return drops
+    .map((d): ProductCard | null => {
+      const product = byId.get(d.productId);
+      if (!product) return null;
+      return { ...mapToProductCard(product, null), lowestPrice: d.newPrice, originalPrice: d.oldPrice };
+    })
+    .filter((p): p is ProductCard => !!p);
 }
 
 export async function fetchTrendingProducts() {

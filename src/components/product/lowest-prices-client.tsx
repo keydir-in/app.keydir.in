@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ProductCard } from './product-card';
 import type { ProductCard as ProductCardType } from '@/types';
+import { useGridColumns } from '@/hooks/use-grid-columns';
 
 const TYPE_FILTERS = [
   { slug: 'all', label: 'All' },
@@ -19,13 +20,16 @@ const TYPE_FILTERS = [
   { slug: 'mouse', label: 'Mouse' },
 ];
 
+const ROWS = 2;
+
 export function LowestPricesClient({ items }: { items: ProductCardType[] }) {
   const [activeFilter, setActiveFilter] = useState('all');
+  const columns = useGridColumns();
 
-  const filtered = useMemo(() => {
-    if (activeFilter === 'all') return items;
-    return items.filter((item) => item.productType === activeFilter);
-  }, [items, activeFilter]);
+  const visible = useMemo(() => {
+    const filtered = activeFilter === 'all' ? items : items.filter((item) => item.productType === activeFilter);
+    return filtered.slice(0, columns * ROWS);
+  }, [items, activeFilter, columns]);
 
   return (
     <>
@@ -50,7 +54,7 @@ export function LowestPricesClient({ items }: { items: ProductCardType[] }) {
       </div>
 
       <div className="lp-grid">
-        {filtered.map((item) => (
+        {visible.map((item) => (
           <ProductCard key={item.id} product={item} />
         ))}
       </div>

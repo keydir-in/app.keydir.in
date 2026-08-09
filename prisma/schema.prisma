@@ -18,6 +18,8 @@ model Profile {
   monkeytype            String?
   website               String?
   registrationComplete  Boolean        @default(false)
+  consentAccepted       Boolean        @default(false)
+  consentVersion        String         @default("v1")
   voteCredits           Int            @default(0)
   voteRewardClaimed     Boolean        @default(false)
   createdAt             DateTime       @default(now())
