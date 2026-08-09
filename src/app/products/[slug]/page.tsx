@@ -92,10 +92,26 @@ export default async function ProductPage({ params }: Props) {
     })),
   }));
 
+  // Resolve linked switch product images so the Components → Switches cards
+  // can show a thumbnail (vendor-row style) instead of a text-only block.
+  const rawSpec: Record<string, unknown> | null = product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec;
+  const switchOpts = Array.isArray(rawSpec?.switches) ? (rawSpec!.switches as Record<string, unknown>[]) : [];
+  const linkedIds = switchOpts.map((s) => s.linkedSwitchId).filter((x): x is string => typeof x === 'string' && !!x);
+  const switchImages: Record<string, string | null> = {};
+  if (linkedIds.length) {
+    const rows = await prisma.product.findMany({
+      where: { id: { in: linkedIds } },
+      select: { id: true, image: true },
+    });
+    for (const r of rows) switchImages[r.id] = r.image;
+  }
+  const spec: Record<string, unknown> | null = rawSpec
+    ? { ...rawSpec, switches: switchOpts.map((s) => ({ ...s, image: s.image ?? switchImages[s.linkedSwitchId as string] ?? null })) }
+    : null;
+
   let userVote: 'upvote' | 'downvote' | null = null;
   let inCollection = false;
-  if (currentUser) {
-    const voteItem = await prisma.vote.findUnique({
+  if (currentUser) {    const voteItem = await prisma.vote.findUnique({
       where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
     });
     userVote = (voteItem?.type as 'upvote' | 'downvote') || null;
@@ -168,6 +184,22 @@ export default async function ProductPage({ params }: Props) {
       }))
     )
     .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime());
+
+  // Stats: lowest/highest are all-time (across full history), average/current
+  // are current vendor prices. Ignore 0/null/undefined entries. current = lowest
+  // current price. Logged once for the debug check.
+  const currentPrices = serializedVendorProducts
+    .map((vp) => toNum(vp.price))
+    .filter((p) => p != null && p > 0);
+  const historyPrices = allHistory.map((h) => h.price).filter((p) => p > 0);
+  const lowest = historyPrices.length > 0 ? Math.min(...historyPrices) : null;
+  const highest = historyPrices.length > 0 ? Math.max(...historyPrices) : null;
+  const average = currentPrices.length > 0
+    ? Math.round(currentPrices.reduce((sum, p) => sum + p, 0) / currentPrices.length)
+    : null;
+  const current = currentPrices.length > 0 ? Math.min(...currentPrices) : null;
+  const priceStats = { lowest, highest, average, current };
+  console.log({ currentPrices, lowest, highest, average, current });
 
   const vendorColors: Record<string, string> = {};
   for (const vp of serializedVendorProducts) {
@@ -281,7 +313,7 @@ export default async function ProductPage({ params }: Props) {
 
                 <ProductHeroSpecs
                   productType={product.productType}
-                  spec={product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec}
+                  spec={spec}
                 />
 
                 <div className="product-hero-overview">
@@ -338,10 +370,11 @@ export default async function ProductPage({ params }: Props) {
         {/* ═══ PRICE HISTORY + SPECIFICATIONS (TABS) ═══ */}
         <ProductTabs
           productType={product.productType}
-          spec={product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec}
+          spec={spec}
           history={allHistory}
           vendorColors={vendorColors}
           coupons={couponByVendor}
+          priceStats={priceStats}
         />
       </div>
 

@@ -6,7 +6,7 @@
  * @/lib/config/category-config; a viewport check picks the desktop sidebar
  * or mobile drawer for the shared filter panel.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
 import { Footer } from '@/components/layout/footer';
@@ -15,8 +15,7 @@ import { EmptyCategory } from '@/components/product/empty-category';
 import { HeroBanner } from '@/components/banner/hero-banner';
 import FilterSidebar from '@/components/product/filter-sidebar';
 import FilterDrawer from '@/components/product/filter-drawer';
-import { Pagination } from '@/components/ui/pagination';
-import { ProductGridSkeleton } from '@/components/skeleton';
+import { ProductGridSkeleton, ProductCardSkeleton } from '@/components/skeleton';
 import { SORT_OPTIONS, type Banner } from '@/lib/constants';
 import type { SortOption } from '@/types';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
@@ -51,12 +50,27 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
 
   const filters = useCatalogFilters({ category });
 
-  const { products, total, page, setPage, totalPages, loading, error, retry } = useProductListing({
+  const { products, total, setPage, pageSize, loading, hasMore, error, retry, loadMore } = useProductListing({
     category,
     q: filters.q,
     sort: filters.sort as SortOption,
     applied: filters.applied,
   });
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) loadMore();
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadMore]);
 
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -81,6 +95,7 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === filters.sort)?.label || 'Lowest Price';
   const showSkeleton = loading && products.length === 0;
+  const streamingSlots = loading && products.length > 0 ? Math.max(0, pageSize - products.length) : 0;
 
   return (
     <div className="catalog-layout">
@@ -138,8 +153,18 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
+                  {Array.from({ length: streamingSlots }).map((_, i) => (
+                    <ProductCardSkeleton key={`skeleton-${i}`} />
+                  ))}
                 </div>
-                <Pagination page={page} totalPages={totalPages} />
+                {hasMore && (
+                  <div className="catalog-load-more">
+                    <button type="button" className="btn-secondary" onClick={loadMore} disabled={loading}>
+                      {loading ? 'Loading…' : 'Load More'}
+                    </button>
+                  </div>
+                )}
+                {hasMore && <div ref={sentinelRef} aria-hidden="true" className="catalog-load-sentinel" />}
               </div>
             )}
           </>

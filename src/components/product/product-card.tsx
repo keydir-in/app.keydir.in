@@ -7,6 +7,7 @@
  */
 
 import Link from 'next/link';
+import { memo } from 'react';
 import { ProductCardImage } from '@/components/shared/product-card-image';
 import { CouponBadge } from '@/components/shared/coupon-badge';
 import { PriceDisplay } from '@/components/shared/price-display';
@@ -22,7 +23,7 @@ interface ProductCardProps {
   collectionItemId?: string;
 }
 
-export function ProductCard({ product, variant = 'listing', brand, onRemove, removing, collectionItemId }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, variant = 'listing', brand, onRemove, removing, collectionItemId }: ProductCardProps) {
   if (variant === 'profile') {
     return (
       <div className="profile-product-card">
@@ -86,4 +87,4 @@ export function ProductCard({ product, variant = 'listing', brand, onRemove, rem
       </div>
     </Link>
   );
-}
+});

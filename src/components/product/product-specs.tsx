@@ -5,6 +5,7 @@
  * triplets group into a single row.
  */
 
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Ruler, Wrench, CircuitBoard, PlugZap, Lightbulb, SlidersHorizontal,
@@ -274,6 +275,7 @@ interface SwitchOpt {
   brand?: string | null;
   opForce?: string | null;
   lubed?: boolean;
+  image?: string | null;
 }
 
 function normSwitch(s: unknown): SwitchOpt | null {
@@ -290,10 +292,13 @@ function normSwitch(s: unknown): SwitchOpt | null {
     brand: str(o.brand) ?? str(o.manufacturer) ?? str(o.linkedSwitchName),
     opForce,
     lubed: valBool(o.lubed) || valBool(o.factoryLubed),
+    image: str(o.image),
   };
 }
 
 interface KeycapOpt {
+  name?: string | null;
+  link?: string | null;
   profile?: string | null;
   material?: string[] | null;
   legendType?: string[] | null;
@@ -307,8 +312,12 @@ function normKeycap(s: unknown): KeycapOpt | null {
   const legendType = jsonArr(o.legendType);
   const legendPlacement = jsonArr(o.legendPlacement);
   const profile = str(o.profile);
-  if (!profile && !material.length && !legendType.length && !legendPlacement.length) return null;
+  const name = str(o.name);
+  const link = str(o.link);
+  if (!name && !profile && !material.length && !legendType.length && !legendPlacement.length) return null;
   return {
+    name,
+    link,
     profile,
     material,
     legendType,
@@ -316,17 +325,26 @@ function normKeycap(s: unknown): KeycapOpt | null {
   };
 }
 
-function OptionCard({ href, name, badges, linkLabel }: {
+function SwitchCard({ href, name, image, badges }: {
   href: string;
   name: string;
+  image?: string | null;
   badges: React.ReactNode;
-  linkLabel: string;
 }) {
   return (
-    <Link href={href} className="spec-opt-card">
-      <div className="spec-opt-name">{name}</div>
-      {badges && <div className="spec-opt-badges">{badges}</div>}
-      <span className="spec-opt-link">{linkLabel} →</span>
+    <Link href={href} className="spec-switch-card">
+      {image ? (
+        <div className="spec-switch-thumb">
+          <Image src={image} alt={name} fill sizes="56px" className="spec-switch-thumb-img" />
+        </div>
+      ) : (
+        <div className="spec-switch-thumb spec-switch-thumb--empty" />
+      )}
+      <div className="spec-switch-body">
+        <span className="spec-switch-name">{name}</span>
+        {badges && <div className="spec-switch-badges">{badges}</div>}
+        <span className="spec-switch-link">View Switch →</span>
+      </div>
     </Link>
   );
 }
@@ -347,11 +365,11 @@ function SwitchModuleBody({ spec }: { spec: Record<string, unknown> }) {
     <div className="spec-module-body">
       <div className="spec-opts">
         {entries.map((sw, i) => (
-          <OptionCard
-            key={sw.name ?? sw.type ?? i}
+          <SwitchCard
+            key={i}
             href="/switches"
             name={sw.name ?? sw.type ?? `Switch Option ${i + 1}`}
-            linkLabel="View Switch"
+            image={sw.image}
             badges={
               <>
                 {sw.type && <span className="spec-chip">{sw.type}</span>}
@@ -362,6 +380,33 @@ function SwitchModuleBody({ spec }: { spec: Record<string, unknown> }) {
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function KeycapCard({ kc, index }: { kc: KeycapOpt; index: number }) {
+  const name = kc.name ?? kc.profile ?? `Keycap Set ${index + 1}`;
+  const tags = [
+    ...(kc.material ?? []),
+    ...(kc.profile ? [kc.profile] : []),
+    ...(kc.legendType ?? []),
+    ...(kc.legendPlacement ?? []),
+  ];
+  return (
+    <div className="spec-opt-card">
+      <div className="spec-opt-name">{name}</div>
+      {tags.length ? (
+        <div className="spec-opt-badges">
+          {tags.map((t) => <span key={t} className="spec-chip">{t}</span>)}
+        </div>
+      ) : (
+        <span className="spec-value spec-value--muted">Not specified</span>
+      )}
+      {kc.link && (
+        <a href={kc.link} target="_blank" rel="noopener noreferrer" className="spec-opt-link">
+          View Keycap →
+        </a>
+      )}
     </div>
   );
 }
@@ -382,19 +427,7 @@ function KeycapModuleBody({ spec }: { spec: Record<string, unknown> }) {
     <div className="spec-module-body">
       <div className="spec-opts">
         {entries.map((kc, i) => (
-          <OptionCard
-            key={kc.profile ?? kc.material?.[0] ?? kc.legendType?.[0] ?? i}
-            href="/keycaps"
-            name={kc.profile ?? kc.material?.[0] ?? kc.legendType?.[0] ?? `Keycap Set ${i + 1}`}
-            linkLabel="View Keycap"
-            badges={
-              <>
-                {kc.material?.map((m) => <span key={m} className="spec-chip">{m}</span>)}
-                {kc.legendType?.map((l) => <span key={l} className="spec-chip">{l}</span>)}
-                {kc.legendPlacement?.map((l) => <span key={l} className="spec-chip">{l}</span>)}
-              </>
-            }
-          />
+          <KeycapCard key={i} kc={kc} index={i} />
         ))}
       </div>
     </div>

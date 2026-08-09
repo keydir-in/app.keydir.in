@@ -1927,6 +1927,87 @@
   color: var(--yellow);
 }
 
+/* Switch option cards — horizontal vendor-row style: thumbnail left, content right */
+.spec-switch-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .03);
+  text-decoration: none;
+  transition: border-color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.spec-switch-card:hover {
+  border-color: var(--yellow);
+  background: rgba(255, 255, 255, .05);
+}
+
+.spec-switch-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.spec-switch-thumb-img {
+  object-fit: contain;
+  object-position: center;
+  transition: transform 200ms ease;
+}
+
+.spec-switch-card:hover .spec-switch-thumb-img {
+  transform: scale(1.05);
+}
+
+.spec-switch-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.spec-switch-name {
+  font-family: var(--f-m);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--text);
+  line-height: 1.3;
+  transition: color var(--dur-fast);
+}
+
+.spec-switch-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spec-switch-link {
+  font-family: var(--f-m);
+  font-size: .68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--green);
+  transition: color var(--dur-fast);
+}
+
+.spec-switch-card:hover .spec-switch-name,
+.spec-switch-card:hover .spec-switch-link {
+  color: var(--yellow);
+}
+
 /* Empty states */
 .spec-note {
   border: 1px dashed rgba(255, 255, 255, .15);
@@ -2767,6 +2848,10 @@
   font-family: var(--f-m);
   font-size: .72rem;
   font-weight: var(--fw-extrabold);
+}
+
+.pc-tooltip-row.is-lowest .pc-tooltip-price {
+  color: var(--green) !important;
 }
 
 /* ── Legend chips ── */
@@ -4262,6 +4347,26 @@
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Load More / infinite scroll ── */
+.catalog-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 8px;
+}
+
+.catalog-load-sentinel {
+  height: 1px;
+}
+
+@keyframes card-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.product-card {
+  animation: card-fade-in .3s ease backwards;
 }
 
 /* ── Empty State ── */

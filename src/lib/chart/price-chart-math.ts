@@ -97,8 +97,9 @@ export function buildDenseSeries(
   for (const p of group.points) {
     const key = toDateKey(new Date(p.recordedAt));
     const idx = dateKeyToIndex.get(key);
-    if (idx !== undefined) {
-      dense[idx] = { dateIndex: idx, price: toNum(p.price), stockStatus: p.stockStatus };
+    const price = toNum(p.price);
+    if (idx !== undefined && price > 0) {
+      dense[idx] = { dateIndex: idx, price, stockStatus: p.stockStatus };
     }
   }
   return dense;
@@ -139,7 +140,7 @@ export function getTooltipData(
   const vendors: TooltipVendor[] = [];
   for (const s of denseSeries) {
     const pt = s.dense[dateIndex];
-    if (pt) {
+    if (pt && pt.price > 0) {
       vendors.push({
         vendor: s.vendor,
         price: pt.price,
@@ -150,6 +151,6 @@ export function getTooltipData(
       });
     }
   }
-  vendors.sort((a, b) => a.price - b.price);
+  vendors.sort((a, b) => b.price - a.price);
   return vendors;
 }

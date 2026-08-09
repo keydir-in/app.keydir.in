@@ -9,7 +9,7 @@
 
 import { useState, useRef } from 'react';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-import { PriceHistoryChart } from '@/components/product/price-history-chart';
+import { PriceHistoryChart, type PriceStats } from '@/components/product/price-history-chart';
 import { SpecGrid, type SpecColumnLayout } from '@/components/product/product-specs';
 import ChartLineIcon from '@/components/product/chart-line-icon';
 import LayoutBottombarCollapseIcon from '@/components/product/layout-bottombar-collapse-icon';
@@ -29,6 +29,7 @@ interface Props {
   history: PricePoint[];
   vendorColors: Record<string, string>;
   coupons?: Record<string, string>;
+  priceStats?: PriceStats;
 }
 
 type AnimatedIcon = ForwardRefExoticComponent<AnimatedIconProps & RefAttributes<AnimatedIconHandle>>;
@@ -74,7 +75,7 @@ function tabTitles(def: SpecTabDef): string[] {
   return [...(def.columns.full ?? []), ...def.columns.columns.flat()];
 }
 
-export function ProductTabs({ productType, spec, history, vendorColors, coupons }: Props) {
+export function ProductTabs({ productType, spec, history, vendorColors, coupons, priceStats }: Props) {
   const [active, setActive] = useState<string>('history');
   const iconRefs = useRef<Record<string, AnimatedIconHandle | null>>({});
 
@@ -127,7 +128,7 @@ export function ProductTabs({ productType, spec, history, vendorColors, coupons 
 
       {active === 'history' && (
         <div className="pt-panel">
-          <PriceHistoryChart history={history} vendorColors={vendorColors} coupons={coupons} />
+          <PriceHistoryChart history={history} vendorColors={vendorColors} coupons={coupons} priceStats={priceStats} />
         </div>
       )}
 

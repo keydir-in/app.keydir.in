@@ -14,10 +14,18 @@ import {
   type PricePoint,
 } from '@/lib/chart/price-chart-math';
 
+export interface PriceStats {
+  lowest: number | null;
+  highest: number | null;
+  average: number | null;
+  current: number | null;
+}
+
 interface PriceHistoryChartProps {
   history: PricePoint[];
   vendorColors?: Record<string, string>;
   coupons?: Record<string, string>;
+  priceStats?: PriceStats;
 }
 
 type TimeRange = '30D' | '3M' | '6M' | '1Y' | 'ALL';
@@ -62,7 +70,7 @@ function formatAxisDate(d: Date, range: TimeRange): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-export function PriceHistoryChart({ history, vendorColors = {}, coupons = {} }: PriceHistoryChartProps) {
+export function PriceHistoryChart({ history, vendorColors = {}, coupons = {}, priceStats }: PriceHistoryChartProps) {
   const [activeRange, setActiveRange] = useState<TimeRange>('6M');
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -131,8 +139,10 @@ export function PriceHistoryChart({ history, vendorColors = {}, coupons = {} }: 
     let min = Infinity, max = 0;
     for (const h of filteredHistory) {
       const p = toNum(h.price);
-      if (p < min) min = p;
-      if (p > max) max = p;
+      if (p > 0) {
+        if (p < min) min = p;
+        if (p > max) max = p;
+      }
     }
     if (!isFinite(min)) min = 0;
     const span = Math.max(max - min, 400);
@@ -183,27 +193,24 @@ export function PriceHistoryChart({ history, vendorColors = {}, coupons = {} }: 
     return labels;
   }, [unifiedDates, activeRange, chartW]);
 
+  const lowest = priceStats?.lowest ?? null;
+  const highest = priceStats?.highest ?? null;
+  const average = priceStats?.average ?? null;
+  const current = priceStats?.current ?? null;
+
   const summary = useMemo(() => {
-    let min = Infinity, max = 0, sum = 0;
-    for (const h of filteredHistory) {
-      const p = toNum(h.price);
-      if (p < min) min = p;
-      if (p > max) max = p;
-      sum += p;
-    }
-    const count = filteredHistory.length;
     const last = history.reduce<PricePoint | null>((best, h) => {
       const t = new Date(h.recordedAt).getTime();
       return !best || t > new Date(best.recordedAt).getTime() ? h : best;
     }, null);
     return {
-      lowest: isFinite(min) ? min : null,
-      highest: count ? max : null,
-      average: count ? Math.round(sum / count) : null,
-      current: last ? toNum(last.price) : null,
+      lowest,
+      highest,
+      average,
+      current,
       updated: last ? new Date(last.recordedAt) : null,
     };
-  }, [filteredHistory, history]);
+  }, [history, lowest, highest, average, current]);
 
   const visibleVendors = useMemo(
     () => denseSeries.filter((s) => !hidden.has(s.vendor)),
@@ -420,8 +427,8 @@ export function PriceHistoryChart({ history, vendorColors = {}, coupons = {} }: 
               <span className="pc-tooltip-date">{formatDate(tooltip.date)}</span>
               <span className="pc-tooltip-range">{activeRange}</span>
             </div>
-            {tooltip.vendors.map((v) => (
-              <div key={v.vendor} className="pc-tooltip-row">
+            {tooltip.vendors.map((v, i) => (
+              <div key={v.vendor} className={`pc-tooltip-row${i === tooltip.vendors.length - 1 ? ' is-lowest' : ''}`}>
                 <span className="pc-tooltip-swatch" style={{ background: v.color, boxShadow: `0 0 8px ${v.color}` }} />
                 <div className="pc-tooltip-top">
                   <span className="pc-tooltip-name">{v.vendor}</span>
