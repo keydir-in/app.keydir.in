@@ -177,11 +177,19 @@ const PRODUCT_DETAIL_INCLUDE = {
         select: {
           id: true, name: true, slug: true, logo: true, chartColor: true, enabled: true,
           scraperEnabled: true, affiliateLink: true, couponsEnabled: true,
-          coupons: { orderBy: [{ priority: 'desc' as const }, { createdAt: 'asc' as const }] },
+          coupons: {
+            // Only active coupons — expired/disabled ones are never shown,
+            // and this keeps the payload from growing with coupon history.
+            where: { enabled: true, OR: [{ endDate: null }, { endDate: { gte: new Date() } }] },
+            orderBy: [{ priority: 'desc' as const }, { createdAt: 'asc' as const }],
+          },
         },
       },
       variants: { orderBy: { createdAt: 'asc' as const } },
-      coupons: { orderBy: { createdAt: 'asc' as const } },
+      coupons: {
+        where: { enabled: true, OR: [{ expiryDate: null }, { expiryDate: { gte: new Date() } }] },
+        orderBy: { createdAt: 'asc' as const },
+      },
       priceHistory: { orderBy: { recordedAt: 'asc' as const }, take: 60 },
     },
     where: { vendor: { enabled: true } },

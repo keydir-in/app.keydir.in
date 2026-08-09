@@ -74,11 +74,14 @@ export async function fetchProductListings(
 
   const where = buildProductWhere(productType, searchParams, specConfig, { brands });
 
-  const products = sort === 'lowest' || sort === 'highest'
-    ? await findProductCardsSortedByPrice(where, sort, pageSize, skip)
-    : await findProductCards(where, buildOrderBy(sort), pageSize, skip);
-
-  const total = await countProducts(where);
+  // products and count are independent queries over the same where — run
+  // them together so a listing costs one round trip, not two.
+  const [products, total] = await Promise.all([
+    sort === 'lowest' || sort === 'highest'
+      ? findProductCardsSortedByPrice(where, sort, pageSize, skip)
+      : findProductCards(where, buildOrderBy(sort), pageSize, skip),
+    countProducts(where),
+  ]);
 
   let userVotes: Record<string, string> = {};
   if (options?.includeUserVotes !== false) {

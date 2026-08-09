@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { Identicon } from '@/components/profile/identicon';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
 import { ProfileEditForm } from '@/components/profile/profile-edit-form';
-import { getProfileByUsername, getCurrentUser, ensureProfile, isAuthenticated } from '@/lib/profile/actions';
+import { getProfileByUsername, getCollectionForProfile, getCurrentUser, ensureProfile, isAuthenticated } from '@/lib/profile/actions';
 import { logout } from '@/lib/auth/actions';
 import { prisma } from '@/lib/prisma';
 import { getRank } from '@/lib/reputation';
@@ -53,8 +53,12 @@ async function loadProfileData(username: string) {
 
   // None of these depend on each other's result — only on profile.id, which
   // we already have. Fetching them together makes the page wait for the
-  // single slowest query instead of the sum of all four.
-  const [votes, contributions, userXpRecord, userBadgesResult] = await Promise.all([
+  // single slowest query instead of the sum of all of them.
+  // ponytail: vote/contribution stat numbers come from count(); the tab lists
+  // are capped at 50 recent rows. The tabs have no pagination yet — add
+  // "load more" if full history becomes a requirement.
+  const [voteCount, votes, contributionCount, contributions, collection, userXpRecord, userBadgesResult] = await Promise.all([
+    prisma.vote.count({ where: { profileId: profile.id } }),
     prisma.vote.findMany({
       where: { profileId: profile.id },
       select: {
@@ -73,10 +77,13 @@ async function loadProfileData(username: string) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 50,
     }),
+    prisma.contribution.count({ where: { profileId: profile.id, status: 'APPROVED' } }),
     prisma.contribution.findMany({
       where: { profileId: profile.id, status: 'APPROVED' },
       orderBy: { createdAt: 'desc' },
+      take: 50,
       select: {
         id: true,
         type: true,
@@ -88,6 +95,11 @@ async function loadProfileData(username: string) {
         approvedBy: { select: { username: true } },
       },
     }),
+    // The Collection tab (default tab) shows every saved product; unlike
+    // votes/contributions this only grows on deliberate saves, so it stays
+    // uncapped. Fetched here so it doesn't block the batch (it used to be
+    // bundled inside getProfileByUsername, serial before everything else).
+    getCollectionForProfile(profile.id),
     prisma.userXP.findUnique({ where: { profileId: profile.id } }),
     getUserBadges(profile.id),
   ]);
@@ -110,7 +122,7 @@ async function loadProfileData(username: string) {
       website: profile.website,
       voteCredits: profile.voteCredits,
       collectionCount: profile._count?.collection ?? 0,
-      collection: profile.collection.map((c) => ({
+      collection: collection.map((c) => ({
         id: c.id,
         createdAt: c.createdAt.toISOString(),
         product: c.product,
@@ -127,6 +139,8 @@ async function loadProfileData(username: string) {
       createdAt: c.createdAt.toISOString(),
       approvedBy: c.approvedBy,
     })),
+    voteCount,
+    contributionCount,
     xp: userXpRecord?.xp ?? 0,
     badges: userBadgesResult,
   };
@@ -168,7 +182,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const rank = getRank(xp);
   const communityBadge = data.badges?.find((ub) => ub.badge.type === 'community');
   const communityRole = communityBadge?.badge.name || 'Member';
-  const stats = { xp, rank, voteCount: data.votes.length, collectionCount: profile.collectionCount, contributionCount: data.contributions.length, badges: data.badges };
+  const stats = { xp, rank, voteCount: data.voteCount, collectionCount: profile.collectionCount, contributionCount: data.contributionCount, badges: data.badges };
 
   return (
     <>

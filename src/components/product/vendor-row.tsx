@@ -104,8 +104,11 @@ export function VendorRow({ vendorProduct: vp }: VendorRowProps) {
   // Main BUY opens the lowest-priced available variant; falls back to the
   // coupon/vendor affiliate link, then the vendor URL.
   const buyLink = lowestVariant?.variantUrl || activeVendorCoupon?.affiliateLink || link;
-  // "From ₹X" uses the raw lowest variant price.
-  const fromPrice = lowestVariant ? toNum(lowestVariant.price) : effectivePrice;
+  // "From ₹X" — variant prices are raw (VendorVariant has no effectivePrice),
+  // so add the vendor's shipping cost to stay on the same basis as the
+  // non-variant effectivePrice shown next to it and the struck-through total.
+  const shippingAdd = vp.shippingIncluded ? 0 : toNum(vp.shippingCost);
+  const fromPrice = lowestVariant ? toNum(lowestVariant.price) + shippingAdd : effectivePrice;
   const showFrom = hasVariants && variants.length > 1;
 
   const logoText = vp.vendor.name.trim().split(/\s+/)[0].slice(0, 4).toUpperCase();

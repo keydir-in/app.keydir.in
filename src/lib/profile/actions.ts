@@ -3,7 +3,7 @@
 /**
  * Server actions for user profile management and product interactions.
  * Handles profile CRUD, username lookup, wishlist/collection toggles, and product voting with XP sync.
- * Exports: getMyProfileUsername, ensureProfile, getProfileByUsername, getCurrentUser, isAuthenticated, updateProfile, toggleWishlist, toggleCollection, removeFromWishlist, removeFromCollection, voteOnProduct
+ * Exports: getMyProfileUsername, ensureProfile, getProfileByUsername, getCollectionForProfile, getCurrentUser, isAuthenticated, updateProfile, toggleWishlist, toggleCollection, removeFromWishlist, removeFromCollection, voteOnProduct
  */
 
 import { cache } from 'react';
@@ -50,30 +50,36 @@ export async function ensureProfile() {
 }
 
 async function _getProfileByUsername(username: string) {
+  // Collection is fetched separately (getCollectionForProfile) and joined
+  // into the profile page's parallel batch — bundling it here serialized the
+  // whole collection query before every other profile query could start.
   return prisma.profile.findUnique({
     where: { username },
     include: {
-      collection: {
-        include: {
-          product: {
-            // The profile-variant ProductCard only renders
-            // slug/name/image/brand/productType — no price is shown for
-            // owned items, so the old `include` (all Product columns) plus
-            // a nested vendorProducts price lookup per item was pure overhead.
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              image: true,
-              productType: true,
-              brand: { select: { name: true } },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      },
       _count: { select: { wishlist: true, collection: true } },
     },
+  });
+}
+
+export async function getCollectionForProfile(profileId: string) {
+  return prisma.collection.findMany({
+    where: { profileId },
+    include: {
+      product: {
+        // The profile-variant ProductCard only renders
+        // slug/name/image/brand/productType — no price is shown for
+        // owned items, so only the columns the card renders are selected.
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          image: true,
+          productType: true,
+          brand: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
   });
 }
 

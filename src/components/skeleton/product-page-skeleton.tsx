@@ -4,7 +4,7 @@
  * spec groups, and vendor cards.
  */
 
-import { Skeleton, SkeletonRectangle, SkeletonBadge, SkeletonButton } from './primitives';
+import { Skeleton, SkeletonText, SkeletonRectangle, SkeletonBadge, SkeletonButton } from './primitives';
 
 export function ProductPageSkeleton() {
   return (
@@ -22,12 +22,18 @@ export function ProductPageSkeleton() {
             <SkeletonRectangle width={180} height={36} />
           </div>
           <div className="product-hero-specs">
-            {Array.from({ length: 5 }).map((_, i) => (
+            {/* heroFields has exactly 4 per category; ProductHeroSpecs filters
+                empty ones so the real count is 0–4. 4 matches the common case. */}
+            {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="product-hero-spec-row">
                 <SkeletonRectangle width={120} height={12} />
                 <SkeletonRectangle width={100} height={12} />
               </div>
             ))}
+          </div>
+          <div className="product-hero-overview">
+            <SkeletonRectangle width={120} height={10} className="mb-2" />
+            <SkeletonText lines={3} />
           </div>
           <div className="product-hero-community mt-4">
             <SkeletonRectangle width={120} height={10} className="mb-3" />
