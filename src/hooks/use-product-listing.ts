@@ -88,6 +88,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
   const queryRef = useRef('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
@@ -106,6 +107,9 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
       }
       const url = `${productsEndpoint}?${p.toString()}`;
       const seq = ++requestSeq.current;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       const cached = responseCache.get(url);
       if (cached) {
@@ -124,7 +128,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
 
       setLoading(true);
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error((body as { error?: string }).error || `Request failed: ${res.status}`);
@@ -168,7 +172,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
         }
         setError(null);
       } catch {
-        if (seq !== requestSeq.current) return;
+        if (seq !== requestSeq.current || controller.signal.aborted) return;
         setError('Failed to load products. Please try again.');
       } finally {
         if (seq === requestSeq.current) setLoading(false);
@@ -177,8 +181,12 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
     [productsEndpoint, category, q, sort, applied],
   );
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { fetchPage(page); }, [fetchPage, page]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPage(page);
+    const controller = abortRef.current;
+    return () => controller?.abort();
+  }, [fetchPage, page]);
 
   const loadMore = useCallback(() => {
     if (loading) return;

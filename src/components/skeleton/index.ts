@@ -9,4 +9,4 @@ export { ProductCardSkeleton, ProductGridSkeleton } from './product-card-skeleto
 export { ProductPageSkeleton } from './product-page-skeleton';
 export { ComparePageSkeleton } from './compare-page-skeleton';
 export { HeroBannerSkeleton, HeroContentSkeleton } from './hero-skeleton';
-export { ProfilePageSkeleton } from './profile-skeleton';
+export { ProfilePageSkeleton, ProfileHeaderSkeleton, StatsSkeleton, ProfileGridSkeleton } from './profile-skeleton';

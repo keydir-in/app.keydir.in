@@ -7,9 +7,9 @@
  */
 
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/navbar';
 import { Identicon } from '@/components/profile/identicon';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
 import { ProfileEditForm } from '@/components/profile/profile-edit-form';
@@ -43,37 +43,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function formatMemberDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+function formatMemberDate(date: string): string {
+  return new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-export default async function ProfilePage({ params, searchParams }: Props) {
-  const { username } = await params;
-  const { edit, tab } = await searchParams;
+async function loadProfileData(username: string) {
+  const profile = await getProfileByUsername(username);
+  if (!profile) return null;
 
-  // No dependency on `profile` — start it now so its round trip overlaps
-  // with the profile lookup below instead of running after it.
-  const currentUserPromise = getCurrentUser();
-
-  let profile = await getProfileByUsername(username);
-
-  if (!profile) {
-    const loggedIn = await isAuthenticated();
-    if (loggedIn) {
-      const created = await ensureProfile();
-      if (created) {
-        if (created.username !== username) redirect(`/profile/${created.username}`);
-        profile = await getProfileByUsername(created.username);
-      }
-    }
-    if (!profile) notFound();
-  }
-
-  // None of these depend on each other's result — only on profile.id/userId,
-  // which we already have. Fetching them together makes the page wait for the
-  // single slowest query instead of the sum of all five.
-  const [currentUser, votes, contributions, userXpRecord, userBadgesResult] = await Promise.all([
-    currentUserPromise,
+  // None of these depend on each other's result — only on profile.id, which
+  // we already have. Fetching them together makes the page wait for the
+  // single slowest query instead of the sum of all four.
+  const [votes, contributions, userXpRecord, userBadgesResult] = await Promise.all([
     prisma.vote.findMany({
       where: { profileId: profile.id },
       select: {
@@ -110,16 +91,87 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     prisma.userXP.findUnique({ where: { profileId: profile.id } }),
     getUserBadges(profile.id),
   ]);
+
+  // Return plain serializable data (Dates as ISO strings). unstable_cache
+  // stores JSON, so without this Date fields would arrive as strings on cache
+  // hits but as Dates on misses; converting up front makes both paths identical.
+  return {
+    profile: {
+      id: profile.id,
+      username: profile.username,
+      userId: profile.userId,
+      displayName: profile.displayName,
+      bio: profile.bio,
+      createdAt: profile.createdAt.toISOString(),
+      github: profile.github,
+      discord: profile.discord,
+      reddit: profile.reddit,
+      monkeytype: profile.monkeytype,
+      website: profile.website,
+      voteCredits: profile.voteCredits,
+      collectionCount: profile._count?.collection ?? 0,
+      collection: profile.collection.map((c) => ({
+        id: c.id,
+        createdAt: c.createdAt.toISOString(),
+        product: c.product,
+      })),
+    },
+    votes: votes.map((v) => ({
+      id: v.id,
+      type: v.type,
+      createdAt: v.createdAt.toISOString(),
+      product: v.product,
+    })),
+    contributions: contributions.map((c) => ({
+      ...c,
+      createdAt: c.createdAt.toISOString(),
+      approvedBy: c.approvedBy,
+    })),
+    xp: userXpRecord?.xp ?? 0,
+    badges: userBadgesResult,
+  };
+}
+
+// Per-username profile data is viewer-independent — cache it across requests
+// (Vercel Data Cache). Mutations revalidate the path; 300s is the fallback
+// staleness floor for anything that doesn't.
+const getCachedProfileData = unstable_cache(loadProfileData, ['profile-data'], { revalidate: 300 });
+
+export default async function ProfilePage({ params, searchParams }: Props) {
+  const { username } = await params;
+  const { edit, tab } = await searchParams;
+
+  // No dependency on `profile` — start it now so its round trip overlaps
+  // with the profile lookup below instead of running after it.
+  const currentUserPromise = getCurrentUser();
+
+  let data = await getCachedProfileData(username);
+
+  if (!data) {
+    const loggedIn = await isAuthenticated();
+    if (loggedIn) {
+      const created = await ensureProfile();
+      if (created) {
+        if (created.username !== username) redirect(`/profile/${created.username}`);
+        // Bypass cache: the cached `null` for this username would otherwise
+        // 404 the just-created profile until it's revalidated.
+        data = await loadProfileData(created.username);
+      }
+    }
+    if (!data) notFound();
+  }
+
+  const currentUser = await currentUserPromise;
+  const profile = data.profile;
   const isOwner = currentUser?.userId === profile.userId;
-  const xp = userXpRecord?.xp || 0;
+  const xp = data.xp;
   const rank = getRank(xp);
-  const communityBadge = userBadgesResult?.find((ub) => ub.badge.type === 'community');
+  const communityBadge = data.badges?.find((ub) => ub.badge.type === 'community');
   const communityRole = communityBadge?.badge.name || 'Member';
-  const stats = { xp, rank, voteCount: votes.length, collectionCount: profile._count?.collection ?? 0, contributionCount: contributions.length, badges: userBadgesResult };
+  const stats = { xp, rank, voteCount: data.votes.length, collectionCount: profile.collectionCount, contributionCount: data.contributions.length, badges: data.badges };
 
   return (
     <>
-      <Navbar />
       <div className="profile-page">
         <div className="profile-container">
           {/* ═══ Hero ═══ */}
@@ -250,19 +302,10 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             activeTab={tab || 'collection'}
             profileUsername={profile.username}
             isOwner={isOwner}
-            collection={profile.collection.map((c) => ({
-              id: c.id,
-              createdAt: c.createdAt.toISOString(),
-              product: c.product,
-            }))}
-            votes={votes.map((v) => ({
-              id: v.id,
-              type: v.type,
-              createdAt: v.createdAt.toISOString(),
-              product: v.product,
-            }))}
+            collection={profile.collection}
+            votes={data.votes}
             voteCredits={profile.voteCredits}
-            memberSince={profile.createdAt.getFullYear()}
+            memberSince={new Date(profile.createdAt).getFullYear()}
             rank={rank}
             reputation={xp}
             communityRole={communityRole}
@@ -276,11 +319,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               monkeytype: profile.monkeytype,
               website: profile.website,
             }}
-            contributions={contributions.map((c) => ({
-              ...c,
-              createdAt: c.createdAt.toISOString(),
-              approvedBy: c.approvedBy,
-            }))}
+            contributions={data.contributions}
           />
         </div>
       </div>

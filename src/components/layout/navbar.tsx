@@ -4,6 +4,8 @@
  * Main navigation bar with category links, global search, compare tray
  * badge, and auth-dependent profile dropdown. Includes mobile drawer
  * navigation and external "More" dropdown.
+ * Rendered once in the ROOT layout (src/app/layout.tsx) so it persists
+ * across navigations — do NOT add it to individual pages.
  * Exports: Navbar
  */
 

@@ -7,7 +7,6 @@
  * or mobile drawer for the shared filter panel.
  */
 import { useState, useEffect, useRef } from 'react';
-import { Navbar } from '@/components/layout/navbar';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
 import { Footer } from '@/components/layout/footer';
 import { ProductCard } from '@/components/product/product-card';
@@ -99,7 +98,6 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
 
   return (
     <div className="catalog-layout">
-      <Navbar />
       <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{config.displayName}</h1>
       {banners.length > 0 && <HeroBanner banners={banners} />}
       <div className="catalog-page">

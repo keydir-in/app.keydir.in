@@ -5,7 +5,6 @@
  * Exports: AuthLayout
  */
 
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 
 interface AuthLayoutProps {
@@ -18,7 +17,6 @@ export function AuthLayout({ title, children }: AuthLayoutProps) {
 
   return (
     <>
-      <Navbar />
       <main className="page-hero">
         <div className="hero-grid">
           <div className="hero-left">

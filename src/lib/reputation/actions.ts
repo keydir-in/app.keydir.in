@@ -200,6 +200,7 @@ export async function updateXP(profileId: string, amount: number, reason: string
 
   await syncRankBadge(profileId);
 
+  revalidatePath('/profile/[username]', 'page');
   return { ok: true, newTotal, rank: getRank(newTotal) };
 }
 
@@ -217,6 +218,7 @@ export async function setXP(profileId: string, amount: number) {
 
   await syncRankBadge(profileId);
 
+  revalidatePath('/profile/[username]', 'page');
   return { ok: true, newTotal, rank: getRank(newTotal) };
 }
 

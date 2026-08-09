@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense, cache } from 'react';
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { VendorRow } from '@/components/product/vendor-row';
 import { ProductHeroCommunity } from '@/components/product/product-hero-community';
@@ -249,7 +248,6 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <Navbar />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 

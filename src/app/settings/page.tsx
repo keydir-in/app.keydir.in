@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { ConnectedAccounts } from '@/components/auth/connected-accounts';
 import { getConnectedAccounts } from '@/lib/auth/actions';
@@ -140,7 +139,6 @@ export default async function SettingsPage({
 
   return (
     <>
-      <Navbar />
       <main className="stg-page">
         <div className="page-body" style={{ maxWidth: '1400px', paddingTop: 'calc(var(--nav-h) + 32px)', paddingBottom: '64px' }}>
 

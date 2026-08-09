@@ -13,6 +13,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeScript } from '@/components/theme-script';
 import { ClientShell } from '@/components/client-shell';
+import { Navbar } from '@/components/layout/navbar';
 import './base.css';
 import './catalog.css';
 import './globals.css';
@@ -107,6 +108,7 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <ClientShell />
+          <Navbar />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{

@@ -7,7 +7,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { HeroBanner } from '@/components/banner/hero-banner';
 import { LowestPrices } from '@/components/product/lowest-prices';
@@ -180,8 +179,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <Navbar />
-
       <main className="page-hero">
         <div className="hero-grid">
           <div className="hero-left">

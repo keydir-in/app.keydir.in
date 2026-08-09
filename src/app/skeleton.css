@@ -64,14 +64,10 @@
   border-radius: var(--rad);
 }
 
-/* Profile product card skeleton */
-.profile-product-card .skeleton-img {
-  aspect-ratio: 1;
-}
-
+/* Profile product card image — matches .profile-product-img (4/3) */
 .profile-product-img {
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 4/3;
   object-fit: cover;
 }
 

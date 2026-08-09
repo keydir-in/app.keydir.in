@@ -165,6 +165,7 @@ export async function toggleCollection(productId: string) {
   }
 
   revalidatePath('/products');
+  revalidatePath(`/profile/${profile.username}`);
 }
 
 export async function removeFromWishlist(wishlistId: string) {
@@ -232,5 +233,6 @@ export async function voteOnProduct(
 
   revalidatePath('/keyboards');
   revalidatePath('/products');
+  revalidatePath(`/profile/${profile.username}`);
   return { success: true };
 }
