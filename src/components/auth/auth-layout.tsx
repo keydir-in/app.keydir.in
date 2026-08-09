@@ -5,8 +5,6 @@
  * Exports: AuthLayout
  */
 
-import { Footer } from '@/components/layout/footer';
-
 interface AuthLayoutProps {
   title: string;
   children: React.ReactNode;
@@ -52,7 +50,6 @@ export function AuthLayout({ title, children }: AuthLayoutProps) {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   );
 }

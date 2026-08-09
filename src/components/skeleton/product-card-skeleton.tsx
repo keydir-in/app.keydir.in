@@ -38,7 +38,7 @@ export function ProductCardSkeleton({ variant = 'listing' }: { variant?: 'listin
   );
 }
 
-export function ProductGridSkeleton({ count = 12 }: { count?: number }) {
+export function ProductGridSkeleton({ count = 25 }: { count?: number }) {
   return (
     <div className="catalog-grid" aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (

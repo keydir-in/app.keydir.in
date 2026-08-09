@@ -8,7 +8,6 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
-import { Footer } from '@/components/layout/footer';
 import { ProductCard } from '@/components/product/product-card';
 import { EmptyCategory } from '@/components/product/empty-category';
 import { HeroBanner } from '@/components/banner/hero-banner';
@@ -136,7 +135,7 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
               </div>
             ) : showSkeleton ? (
               <div className="catalog-product-area">
-                <ProductGridSkeleton count={12} />
+                <ProductGridSkeleton count={25} />
               </div>
             ) : products.length === 0 ? (
               <div className="catalog-empty">
@@ -170,8 +169,6 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
       </div>
 
       <SubmitProductCTA productType={config.submitType} />
-
-      <Footer />
     </div>
   );
 }

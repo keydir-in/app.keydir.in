@@ -73,6 +73,11 @@ export function Navbar() {
   const touchStartX = useRef(0);
   const touchCurrentX = useRef(0);
 
+  // Refetch on every pathname change (not just mount): the navbar lives in the
+  // ROOT layout, which persists across soft navigations, so after a login/logout
+  // redirect the previous mount-only fetch would never see the new session.
+  // getCurrentUser() returns null when logged out — clear the state then too,
+  // otherwise a signed-out user would keep the stale profile dropdown.
   useEffect(() => {
     const stored = loadCompareFromStorage();
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -80,18 +85,16 @@ export function Navbar() {
     setCompareCategory(stored.category);
     setCompareSlugs(stored.products.map((p) => p.slug));
     getCurrentUser().then((data) => {
-      if (data) {
-        setUser({
-          username: data.username,
-          isAdmin: data.isAdmin,
-          avatarUrl: data.avatarUrl,
-          displayName: data.displayName,
-          email: data.email,
-        });
-        setAvatarFailed(false);
-      }
+      setUser(data ? {
+        username: data.username,
+        isAdmin: data.isAdmin,
+        avatarUrl: data.avatarUrl,
+        displayName: data.displayName,
+        email: data.email,
+      } : null);
+      setAvatarFailed(false);
     });
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

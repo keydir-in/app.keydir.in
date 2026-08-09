@@ -7,7 +7,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Footer } from '@/components/layout/footer';
 import { HeroBanner } from '@/components/banner/hero-banner';
 import { LowestPrices } from '@/components/product/lowest-prices';
 import { prisma } from '@/lib/prisma';
@@ -256,8 +255,6 @@ export default async function HomePage() {
           </div>
         </section>
       </div>
-
-      <Footer />
     </>
   );
 }

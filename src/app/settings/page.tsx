@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Footer } from '@/components/layout/footer';
 import { ConnectedAccounts } from '@/components/auth/connected-accounts';
 import { getConnectedAccounts } from '@/lib/auth/actions';
 import { createClient } from '@/lib/supabase/server';
@@ -233,7 +232,6 @@ export default async function SettingsPage({
 
         </div>
       </main>
-      <Footer />
     </>
   );
 }

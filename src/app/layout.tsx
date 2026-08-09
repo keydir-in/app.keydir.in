@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ThemeScript } from '@/components/theme-script';
 import { ClientShell } from '@/components/client-shell';
 import { Navbar } from '@/components/layout/navbar';
+import { AppFooter } from '@/components/layout/app-footer';
 import './base.css';
 import './catalog.css';
 import './globals.css';
@@ -142,6 +143,7 @@ export default function RootLayout({
             }}
           />
           <div id="main-content">{children}</div>
+          <AppFooter />
           <Script
             src="https://cloud.umami.is/script.js"
             data-website-id="daeeffe3-c516-4399-8875-451d8ae110ff"

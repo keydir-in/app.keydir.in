@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense, cache } from 'react';
-import { Footer } from '@/components/layout/footer';
 import { VendorRow } from '@/components/product/vendor-row';
 import { ProductHeroCommunity } from '@/components/product/product-hero-community';
 import { ProductHeroStats } from '@/components/product/product-hero-stats';
@@ -383,8 +382,6 @@ export default async function ProductPage({ params }: Props) {
           priceStats={priceStats}
         />
       </div>
-
-      <Footer />
     </>
   );
 }

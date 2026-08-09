@@ -4,7 +4,6 @@
  * Exports: CompareLayout
  */
 
-import { Footer } from '@/components/layout/footer';
 import { PublicBanners } from '@/components/banner/public-banners';
 import Link from 'next/link';
 
@@ -26,7 +25,6 @@ export function CompareLayout({ breadcrumb, bannerLocation, children }: Props) {
         </div>
         {children}
       </div>
-      <Footer />
     </>
   );
 }
