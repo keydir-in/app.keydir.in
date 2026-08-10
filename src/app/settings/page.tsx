@@ -6,6 +6,7 @@ import { ConnectedAccounts } from '@/components/auth/connected-accounts';
 import { getConnectedAccounts } from '@/lib/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
+import { prisma } from '@/lib/prisma';
 
 export const metadata: Metadata = {
   title: 'Account Settings | KeyDir',
@@ -116,18 +117,14 @@ export default async function SettingsPage({
   const totalCount = accounts?.methods.length ?? 0;
   const pct = totalCount ? Math.round((connectedCount / totalCount) * 100) : 0;
 
-  const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   const hasPassword = accounts?.methods.find((m) => m.id === 'password')?.connected ?? false;
   const hasGoogle = accounts?.methods.find((m) => m.id === 'google')?.connected ?? false;
   const hasDiscord = accounts?.methods.find((m) => m.id === 'discord')?.connected ?? false;
 
   const votingEligible = accounts?.votingEligible ?? false;
   const voteCredits = accounts?.voteCredits ?? 0;
+
+  const soundTestCount = profile ? await prisma.soundTest.count({ where: { profileId: profile.id } }) : 0;
 
   const checks = [
     { label: 'Password', met: hasPassword },
@@ -151,10 +148,34 @@ export default async function SettingsPage({
                 <h1 className="page-hero-title" style={{ fontSize: 'clamp(2.5rem, 4.2vw, 3.75rem)', marginBottom: '.5rem', lineHeight: .9 }}>
                   {profile?.username ?? user.email?.split('@')[0] ?? 'USER'}
                 </h1>
-                <div className="stg-hero-sub">
-                  <span className="stg-hero-email">{user.email}</span>
-                  <span className="stg-hero-sep">/</span>
-                  <span>Member since {memberSince}</span>
+              </div>
+
+              <div className="stg-hero-right">
+                <div className="stg-status-panel">
+                  <div className="stg-status-head">
+                    <span className="stg-status-title">USAGE &amp; QUOTA</span>
+                  </div>
+                  <div className="stg-quota">
+                    <div className="stg-quota-item">
+                      <div className="stg-quota-top">
+                        <span className="stg-quota-label">VOTING CREDITS</span>
+                        <span className="stg-quota-val">{voteCredits} / 10</span>
+                      </div>
+                      <div className="stg-progress-bar">
+                        <div className="stg-progress-fill" style={{ width: `${Math.min(100, (voteCredits / 10) * 100)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="stg-quota-item">
+                      <div className="stg-quota-top">
+                        <span className="stg-quota-label">SOUND TEST UPLOADS</span>
+                        <span className="stg-quota-val">{soundTestCount} / 10 used</span>
+                      </div>
+                      <div className="stg-progress-bar">
+                        <div className="stg-progress-fill" style={{ width: `${Math.min(100, (soundTestCount / 10) * 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -162,11 +183,7 @@ export default async function SettingsPage({
                 <div className="stg-status-panel">
                   <div className="stg-status-head">
                     <span className="stg-status-title">AUTH STATUS</span>
-                    <span className={`stg-status-badge ${votingEligible ? 'stg-status-badge--on' : 'stg-status-badge--off'}`}>
-                      {votingEligible ? 'ELIGIBLE' : 'INCOMPLETE'}
-                    </span>
                   </div>
-
                   <div className="stg-progress">
                     <div className="stg-progress-meta">
                       <span className="stg-progress-label">{checksMet} OF {totalCount} CONNECTED</span>
@@ -198,9 +215,15 @@ export default async function SettingsPage({
                       )}
                     </div>
                     {votingEligible ? (
-                      <div className="stg-voting-reward">
-                        <span className="stg-voting-reward-icon">{'\u2713'}</span>
-                        <span>{voteCredits} Voting Credits Available</span>
+                      <div className="stg-voting-rewards">
+                        <div className="stg-reward">
+                          <span className="stg-reward-check">✓</span>
+                          <span className="stg-reward-text">Voting Unlocked</span>
+                        </div>
+                        <div className="stg-reward">
+                          <span className="stg-reward-check">✓</span>
+                          <span className="stg-reward-text">Sound Test Uploads Unlocked</span>
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -211,6 +234,7 @@ export default async function SettingsPage({
                           <span className="stg-voting-preview-label">Unlock to access:</span>
                           <span>{'>'} {voteCredits} Voting Credits</span>
                           <span>{'>'} Community Reputation</span>
+                          <span>{'>'} Sound Test Uploads</span>
                         </div>
                       </>
                     )}

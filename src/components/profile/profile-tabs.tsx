@@ -13,6 +13,8 @@ import { useEffect, useState } from 'react';
 import { removeFromCollection } from '@/lib/profile/actions';
 import { ProductCard } from '@/components/product/product-card';
 import ContributionCard from '@/components/profile/contribution-card';
+import { SoundTestCard } from '@/components/product/sound-test-card';
+import type { SoundTestItem } from '@/types';
 
 interface CollectionItem {
   id: string;
@@ -71,13 +73,27 @@ interface ProfileTabsProps {
     website: string | null;
   };
   contributions?: ContributionItem[];
+  soundTests?: {
+    productId: string;
+    productSlug: string;
+    productName: string;
+    test: SoundTestItem;
+  }[];
 }
 
 const TABS = [
   { id: 'collection', label: 'COLLECTION' },
   { id: 'contributions', label: 'CONTRIBUTIONS' },
+  { id: 'sound-tests', label: 'SOUND TESTS' },
   { id: 'profile', label: 'PROFILE' },
   { id: 'activity', label: 'ACTIVITY' },
+] as const;
+
+const CATEGORIES = [
+  { id: 'keyboards', label: 'KEYBOARDS' },
+  { id: 'switches', label: 'SWITCHES' },
+  { id: 'keycaps', label: 'KEYCAPS' },
+  { id: 'mouse', label: 'MOUSE' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -95,6 +111,7 @@ export function ProfileTabs({
   communityRole,
   profile,
   contributions,
+  soundTests,
 }: ProfileTabsProps) {
   const router = useRouter();
   const [removing, setRemoving] = useState<string | null>(null);
@@ -130,6 +147,11 @@ export function ProfileTabs({
     setRemoving(id);
     await removeFromCollection(id);
     router.refresh();
+  }
+
+  async function handleDeleteSoundTest(id: string) {
+    const res = await fetch(`/api/sound-tests/${id}`, { method: 'DELETE' });
+    if (res.ok) router.refresh();
   }
 
   return (
@@ -210,29 +232,43 @@ export function ProfileTabs({
                 </div>
               </div>
             ) : (
-              <div className="profile-grid">
-                {collection.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    product={{
-                      ...item.product,
-                      lowestPrice: null,
-                      originalPrice: null,
-                      hasCoupons: false,
-                      couponCode: null,
-                      vendorCount: 0,
-                      upvotes: 0,
-                      downvotes: 0,
-                      approval: null,
-                      userVote: null,
-                    }}
-                    variant="profile"
-                    brand={item.product.brand?.name ?? undefined}
-                    onRemove={isOwner ? handleRemove : undefined}
-                    removing={removing === item.id}
-                    collectionItemId={item.id}
-                  />
-                ))}
+              <div className="profile-collection-sections">
+                {CATEGORIES.map((cat) => {
+                  const items = collection.filter((c) => c.product.productType === cat.id);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={cat.id} className="profile-collection-section">
+                      <div className="profile-collection-head">
+                        <span className="profile-collection-title">{cat.label}</span>
+                        <span className="profile-collection-count">{items.length}</span>
+                      </div>
+                      <div className="profile-grid">
+                        {items.map((item) => (
+                          <ProductCard
+                            key={item.id}
+                            product={{
+                              ...item.product,
+                              lowestPrice: null,
+                              originalPrice: null,
+                              hasCoupons: false,
+                              couponCode: null,
+                              vendorCount: 0,
+                              upvotes: 0,
+                              downvotes: 0,
+                              approval: null,
+                              userVote: null,
+                            }}
+                            variant="profile"
+                            brand={item.product.brand?.name ?? undefined}
+                            onRemove={isOwner ? handleRemove : undefined}
+                            removing={removing === item.id}
+                            collectionItemId={item.id}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -267,6 +303,40 @@ export function ProfileTabs({
                 <Link href="/keyboards">Browse Keyboards</Link>
                 <Link href="/switches">Browse Switches</Link>
                 <Link href="/mouse">Browse Mice</Link>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* ═══ SOUND TESTS TAB ═══ */}
+        {current === 'sound-tests' && (
+          soundTests && soundTests.length > 0 ? (
+            <div className="st-list">
+              {soundTests.map(({ test, productId, productSlug, productName }) => (
+                <div key={test.id} className="profile-st-item">
+                  <Link href={`/products/${productSlug}`} className="profile-st-product">
+                    {productName}
+                  </Link>
+                  <SoundTestCard
+                    test={test}
+                    productId={productId}
+                    productSlug={productSlug}
+                    canDelete={isOwner}
+                    onDelete={() => handleDeleteSoundTest(test.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="profile-empty">
+              <div className="profile-empty-icon">{'\u266a'}</div>
+              <p className="profile-empty-text">No sound tests yet.</p>
+              <p className="profile-empty-sub">
+                Upload sound tests on any keyboard or switch product page to share your build&apos;s sound.
+              </p>
+              <div className="profile-empty-links">
+                <Link href="/keyboards">Browse Keyboards</Link>
+                <Link href="/switches">Browse Switches</Link>
               </div>
             </div>
           )

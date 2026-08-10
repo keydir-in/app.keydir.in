@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import Link from 'next/link';
 import { FooterThemeToggle } from './footer-theme-toggle';
+import { ReportButton } from '@/components/report/report-button';
 
 export const Footer = memo(function Footer() {
   return (
@@ -48,12 +49,15 @@ export const Footer = memo(function Footer() {
         </div>
       </div>
 
-      <div className="f-bottom">
-        <div className="f-copy">
-          © 2026 KeyDir — Built by SHADOW269
+        <div className="f-bottom">
+          <div className="f-copy">
+            © 2026 KeyDir — Built by SHADOW269
+          </div>
+          <div className="f-actions">
+            <ReportButton type="PAGE_ISSUE" className="f-report-btn">Report Issue</ReportButton>
+            <FooterThemeToggle />
+          </div>
         </div>
-        <FooterThemeToggle />
-      </div>
       <div className="f-watermark">KEYDIR</div>
     </footer>
   );

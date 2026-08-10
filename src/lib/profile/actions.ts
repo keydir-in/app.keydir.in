@@ -203,11 +203,15 @@ export async function voteOnProduct(
   const { user, profile } = await getCurrentUserAndProfile();
   if (!user || !profile) return { error: 'auth_required' };
 
-  const { isVotingEligible } = await import('@/lib/auth/actions');
+  const { isVotingEligible, checkAndGrantReward } = await import('@/lib/auth/actions');
   const eligibility = await isVotingEligible(user.id);
   if (!eligibility.eligible) {
     return { error: 'voting_locked' };
   }
+
+  // Self-heal the one-time credit reward for eligible users who connected
+  // their providers before the reward existed (grant normally fires on login).
+  await checkAndGrantReward(user.id);
 
   const existing = await prisma.vote.findUnique({
     where: { profileId_productId: { profileId: profile.id, productId } },
@@ -230,11 +234,13 @@ export async function voteOnProduct(
 
   if (xpDelta !== 0) {
     const xp = await prisma.userXP.findUnique({ where: { profileId: profile.id } });
+    const newTotal = Math.max(0, (xp?.xp ?? 0) + xpDelta);
     if (xp) {
-      const newTotal = Math.max(0, xp.xp + xpDelta);
       await prisma.userXP.update({ where: { profileId: profile.id }, data: { xp: newTotal } });
-      await syncRankBadge(profile.id);
+    } else {
+      await prisma.userXP.create({ data: { profileId: profile.id, xp: newTotal } });
     }
+    await syncRankBadge(profile.id);
   }
 
   revalidatePath('/keyboards');

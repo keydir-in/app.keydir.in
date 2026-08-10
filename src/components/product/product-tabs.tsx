@@ -9,6 +9,7 @@
 
 import { useState, useRef } from 'react';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
+import { TriangleAlertIcon } from 'lucide-react';
 import { PriceHistoryChart, type PriceStats } from '@/components/product/price-history-chart';
 import { SpecGrid, type SpecColumnLayout } from '@/components/product/product-specs';
 import ChartLineIcon from '@/components/product/chart-line-icon';
@@ -22,8 +23,10 @@ import LayoutDashboardIcon from '@/components/product/layout-dashboard-icon';
 import { CATEGORY_SPECS } from '@/lib/product-spec-config';
 import type { PricePoint } from '@/lib/chart/price-chart-math';
 import type { AnimatedIconHandle, AnimatedIconProps } from '@/components/product/types';
+import { ReportModal } from '@/components/report/report-button';
 
 interface Props {
+  productId: string;
   productType: string;
   spec: Record<string, unknown> | null;
   history: PricePoint[];
@@ -75,8 +78,9 @@ function tabTitles(def: SpecTabDef): string[] {
   return [...(def.columns.full ?? []), ...def.columns.columns.flat()];
 }
 
-export function ProductTabs({ productType, spec, history, vendorColors, coupons, priceStats }: Props) {
+export function ProductTabs({ productId, productType, spec, history, vendorColors, coupons, priceStats }: Props) {
   const [active, setActive] = useState<string>('history');
+  const [reportOpen, setReportOpen] = useState(false);
   const iconRefs = useRef<Record<string, AnimatedIconHandle | null>>({});
 
   const config = CATEGORY_SPECS[productType];
@@ -124,6 +128,15 @@ export function ProductTabs({ productType, spec, history, vendorColors, coupons,
             {t.label}
           </button>
         ))}
+        <button
+          type="button"
+          className="pt-report-tab"
+          onClick={() => setReportOpen(true)}
+          aria-label="Report this product"
+          title="Report this product"
+        >
+          <TriangleAlertIcon size={15} />
+        </button>
       </div>
 
       {active === 'history' && (
@@ -143,6 +156,15 @@ export function ProductTabs({ productType, spec, history, vendorColors, coupons,
             />
           </div>
         ) : null
+      )}
+
+      {reportOpen && (
+        <ReportModal
+          type="PRODUCT_ISSUE"
+          productId={productId}
+          onClose={() => setReportOpen(false)}
+          onSubmitted={() => setReportOpen(false)}
+        />
       )}
     </section>
   );

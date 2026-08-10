@@ -13,10 +13,15 @@ import { resolveBestDeal } from '@/lib/services/coupon-utils';
 import { formatPrice, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
+import { canUploadSoundTests, getCurrentUser } from '@/lib/auth/actions';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
+import type { SoundTestItem } from '@/types';
+import { SoundTests } from '@/components/product/sound-tests';
 
 export const revalidate = 300;
+
+const SOUND_TEST_PAGE_TYPES = new Set(['keyboards', 'switches']);
 
 const getProduct = cache(findProductBySlug);
 
@@ -61,6 +66,8 @@ export default async function ProductPage({ params }: Props) {
   ]);
 
   if (!product) notFound();
+
+  const authUser = await getCurrentUser();
 
   // Gallery shows the primary image first (matches listing cards), then any
   // extra ProductImage rows by sortOrder. Falls back to the single image.
@@ -121,6 +128,49 @@ export default async function ProductPage({ params }: Props) {
     userVote = (voteItem?.type as 'upvote' | 'downvote') || null;
     inCollection = !!collectionItem;
   }
+
+  const soundTestRows = await prisma.soundTest.findMany({
+    where: { productId: product.id },
+    orderBy: { createdAt: 'desc' },
+    include: { profile: { select: { username: true } }, switchProduct: { select: { name: true } } },
+  });
+
+  const canUploadSoundTest = currentUser
+    ? await canUploadSoundTests(currentUser.userId, currentUser.isVerified)
+    : false;
+
+  const userSoundTestCount = currentUser
+    ? await prisma.soundTest.count({ where: { profileId: currentUser.id } })
+    : 0;
+
+  // Switch products available for the sound-test switch picker.
+  const switchOptions = await prisma.product.findMany({
+    where: { productType: 'switches', status: 'active' },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+
+  const soundTests: SoundTestItem[] = soundTestRows.map((st) => ({
+    id: st.id,
+    audioUrl: st.audioUrl,
+    duration: st.duration,
+    keyboardName: st.keyboardName,
+    foamUsed: st.foamUsed,
+    pcbDetails: st.pcbDetails,
+    plate: st.plate,
+    switchName: st.switchProduct?.name ?? st.switchName,
+    springWeight: st.springWeight,
+    isLubed: st.isLubed,
+    isFilmed: st.isFilmed,
+    otherMods: st.otherMods,
+    keycapsName: st.keycapsName,
+    keycapsMaterial: st.keycapsMaterial,
+    keycapsProfile: st.keycapsProfile,
+    additionalMods: st.additionalMods,
+    createdAt: st.createdAt.toISOString(),
+    username: st.profile.username,
+    profileId: st.profileId,
+  }));
 
   const { upvotes, downvotes } = computeVoteStats(product.votes);
   const vendorCount = serializedVendorProducts.length;
@@ -374,6 +424,7 @@ export default async function ProductPage({ params }: Props) {
 
         {/* ═══ PRICE HISTORY + SPECIFICATIONS (TABS) ═══ */}
         <ProductTabs
+          productId={product.id}
           productType={product.productType}
           spec={spec}
           history={allHistory}
@@ -381,6 +432,23 @@ export default async function ProductPage({ params }: Props) {
           coupons={couponByVendor}
           priceStats={priceStats}
         />
+
+        {/* ═══ SOUND TESTS ═══ */}
+        {SOUND_TEST_PAGE_TYPES.has(product.productType) && (
+          <SoundTests
+            productId={product.id}
+            productSlug={product.slug}
+            productName={product.name}
+            productType={product.productType}
+            canUpload={canUploadSoundTest}
+            isLoggedIn={!!currentUser}
+            currentProfileId={currentUser?.id ?? null}
+            isAdmin={authUser?.isAdmin ?? false}
+            items={soundTests}
+            switches={switchOptions}
+            userSoundTestCount={userSoundTestCount}
+          />
+        )}
       </div>
     </>
   );

@@ -20,6 +20,7 @@ model Profile {
   registrationComplete  Boolean        @default(false)
   consentAccepted       Boolean        @default(false)
   consentVersion        String         @default("v1")
+  isVerified            Boolean        @default(false)
   voteCredits           Int            @default(0)
   voteRewardClaimed     Boolean        @default(false)
   createdAt             DateTime       @default(now())
@@ -35,6 +36,8 @@ model Profile {
   userXp                UserXP?
   votes                 Vote[]
   wishlist              Wishlist[]
+  soundTests            SoundTest[]
+  reports               Report[]
 
   @@index([username])
 }
@@ -86,6 +89,13 @@ model Vendor {
   scraperVersion         Int             @default(1)
   scraperNotes           String?
   couponsEnabled         Boolean         @default(true)
+  priceMonitoringEnabled Boolean         @default(true)
+  priceMonitoringFrequency String        @default("daily")
+  stockMonitoringEnabled Boolean         @default(true)
+  stockMonitoringFrequency String        @default("daily")
+  scheduleStartTime      String          @default("03:00")
+  scheduleEndTime        String          @default("05:00")
+  lastScrapeStats        Json?
   coupons                VendorCoupon[]
   scrapeLogs             ScrapeLog[]
   vendorProducts         VendorProduct[]
@@ -123,10 +133,79 @@ model Product {
   vendorProducts  VendorProduct[]
   votes           Vote[]
   wishlist        Wishlist[]
+  soundTests      SoundTest[]
+  reports         Report[]
+  soundTestsUsed  SoundTest[] @relation("SoundTestSwitch")
 
   @@index([slug])
   @@index([productType])
   @@index([brandId])
+}
+
+model SoundTest {
+  id               String   @id @default(cuid())
+  productId        String
+  profileId        String
+  audioUrl         String
+  publicId         String?
+  duration         Float    @default(0)
+  keyboardName     String
+  foamUsed         String?
+  pcbDetails       String?
+  plate            String?
+  switchId         String?
+  switchName       String?
+  springWeight     String?
+  isLubed          Boolean  @default(false)
+  isFilmed         Boolean  @default(false)
+  otherMods        String?
+  keycapsName      String?
+  keycapsMaterial  String?
+  keycapsProfile   String?
+  additionalMods   String?
+  createdAt        DateTime @default(now())
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  switchProduct    Product? @relation("SoundTestSwitch", fields: [switchId], references: [id], onDelete: SetNull)
+  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  reports          Report[]
+
+  @@index([productId, createdAt])
+  @@index([profileId])
+  @@index([switchId])
+}
+
+enum ReportType {
+  PAGE_ISSUE
+  PRODUCT_ISSUE
+  SOUND_TEST_ISSUE
+}
+
+enum ReportStatus {
+  open
+  reviewing
+  resolved
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  type        ReportType
+  productId   String?
+  soundTestId String?
+  pageUrl     String
+  message     String
+  reason      String?
+  profileId   String
+  status      ReportStatus @default(open)
+  createdAt   DateTime     @default(now())
+
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  soundTest SoundTest? @relation(fields: [soundTestId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([profileId])
+  @@index([productId])
+  @@index([soundTestId])
 }
 
 model VendorProduct {

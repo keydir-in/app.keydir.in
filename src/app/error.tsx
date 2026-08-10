@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ReportButton } from '@/components/report/report-button';
 
 export default function Error({
   error,
@@ -34,6 +35,14 @@ export default function Error({
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={reset} className="btn-primary">TRY AGAIN</button>
           <Link href="/" className="btn-secondary">BACK TO HOME</Link>
+          <ReportButton
+            type="PAGE_ISSUE"
+            instant
+            message={`Unhandled runtime error${error.digest ? ` (Ref: ${error.digest})` : ''}`}
+            className="btn-secondary"
+          >
+            [ REPORT THIS ERROR ]
+          </ReportButton>
         </div>
       </div>
     </main>

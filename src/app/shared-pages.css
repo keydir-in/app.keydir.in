@@ -899,10 +899,68 @@
 }
 
 /* ── Collection Grid ── */
+.profile-collection-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.profile-collection-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.profile-collection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--bd-subtle);
+}
+
+.profile-collection-title {
+  font-family: var(--f-m);
+  font-size: var(--fs-badge);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-muted);
+}
+
+.profile-collection-count {
+  font-family: var(--f-m);
+  font-size: .68rem;
+  font-weight: var(--fw-extrabold);
+  color: var(--yellow);
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--sp-3);
+}
+
+/* ── Sound Tests Tab ── */
+.profile-st-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-st-product {
+  font-family: var(--f-m);
+  font-size: .72rem;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--yellow);
+  text-decoration: none;
+}
+
+.profile-st-product:hover {
+  text-decoration: underline;
 }
 
 .profile-product-card {
@@ -2617,7 +2675,7 @@
 /* ── Hero grid ── */
 .stg-hero-grid {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 280px 280px;
   align-items: start;
   gap: 40px;
   padding: 36px 0;
@@ -2734,6 +2792,38 @@
   transition: width .3s ease;
 }
 
+/* ── Quota in hero ── */
+.stg-quota {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.stg-quota-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: 8px;
+}
+
+.stg-quota-label {
+  font-family: var(--f-m);
+  font-size: .72rem;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+}
+
+.stg-quota-val {
+  font-family: var(--f-m);
+  font-size: .72rem;
+  font-weight: var(--fw-extrabold);
+  color: var(--yellow);
+}
+
 /* ── Provider checklist ── */
 .stg-checks {
   display: flex;
@@ -2790,17 +2880,36 @@
   color: var(--text-muted);
 }
 
-.stg-voting-reward {
+.stg-voting-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.stg-reward {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 10px;
+}
+
+.stg-reward-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(0, 200, 120, .12);
+  color: var(--green);
+  font-size: .72rem;
+  font-weight: var(--fw-extrabold);
+}
+
+.stg-reward-text {
   font-family: var(--f-m);
   font-size: .72rem;
   color: var(--green);
-}
-
-.stg-voting-reward-icon {
-  font-size: .8rem;
 }
 
 .stg-voting-cta {

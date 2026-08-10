@@ -85,3 +85,31 @@ export interface ProductCard {
   approval: number | null;
   userVote: 'upvote' | 'downvote' | null;
 }
+
+/** A user-submitted sound test, serialized for the client. */
+export interface SoundTestItem {
+  id: string;
+  audioUrl: string;
+  duration: number;
+  keyboardName: string;
+  foamUsed: string | null;
+  pcbDetails: string | null;
+  plate: string | null;
+  switchName: string | null;
+  springWeight: string | null;
+  isLubed: boolean;
+  isFilmed: boolean;
+  otherMods: string | null;
+  keycapsName: string | null;
+  keycapsMaterial: string | null;
+  keycapsProfile: string | null;
+  additionalMods: string | null;
+  createdAt: string;
+  username: string;
+  profileId: string;
+}
+
+export interface SwitchOption {
+  id: string;
+  name: string;
+}

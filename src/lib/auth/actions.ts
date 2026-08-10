@@ -53,6 +53,18 @@ export async function isVotingEligible(userId: string): Promise<VotingEligibilit
   };
 }
 
+/**
+ * Whether a user can upload sound tests: admin-verified profiles always
+ * can; otherwise the account must be fully set up (password + Google +
+ * Discord + completed profile) — the same "Auth Status: ELIGIBLE" state
+ * that unlocks voting.
+ */
+export async function canUploadSoundTests(userId: string, isVerified: boolean): Promise<boolean> {
+  if (isVerified) return true;
+  const eligibility = await isVotingEligible(userId);
+  return eligibility.eligible;
+}
+
 export async function checkAndGrantReward(userId: string) {
   const profile = await prisma.profile.findUnique({
     where: { userId },

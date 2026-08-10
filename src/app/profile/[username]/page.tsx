@@ -57,7 +57,7 @@ async function loadProfileData(username: string) {
   // ponytail: vote/contribution stat numbers come from count(); the tab lists
   // are capped at 50 recent rows. The tabs have no pagination yet — add
   // "load more" if full history becomes a requirement.
-  const [voteCount, votes, contributionCount, contributions, collection, userXpRecord, userBadgesResult] = await Promise.all([
+  const [voteCount, votes, contributionCount, contributions, collection, userXpRecord, userBadgesResult, soundTests] = await Promise.all([
     prisma.vote.count({ where: { profileId: profile.id } }),
     prisma.vote.findMany({
       where: { profileId: profile.id },
@@ -102,6 +102,32 @@ async function loadProfileData(username: string) {
     getCollectionForProfile(profile.id),
     prisma.userXP.findUnique({ where: { profileId: profile.id } }),
     getUserBadges(profile.id),
+    prisma.soundTest.findMany({
+      where: { profileId: profile.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        audioUrl: true,
+        duration: true,
+        keyboardName: true,
+        foamUsed: true,
+        pcbDetails: true,
+        plate: true,
+        switchName: true,
+        springWeight: true,
+        isLubed: true,
+        isFilmed: true,
+        otherMods: true,
+        keycapsName: true,
+        keycapsMaterial: true,
+        keycapsProfile: true,
+        additionalMods: true,
+        createdAt: true,
+        profile: { select: { username: true } },
+        product: { select: { id: true, slug: true, name: true, brand: { select: { name: true } } } },
+      },
+    }),
   ]);
 
   // Return plain serializable data (Dates as ISO strings). unstable_cache
@@ -143,6 +169,32 @@ async function loadProfileData(username: string) {
     contributionCount,
     xp: userXpRecord?.xp ?? 0,
     badges: userBadgesResult,
+    soundTests: soundTests.map((t) => ({
+      productId: t.product.id,
+      productSlug: t.product.slug,
+      productName: t.product.brand?.name ? `${t.product.brand.name} ${t.product.name}` : t.product.name,
+      test: {
+        id: t.id,
+        audioUrl: t.audioUrl,
+        duration: t.duration,
+        keyboardName: t.keyboardName,
+        foamUsed: t.foamUsed,
+        pcbDetails: t.pcbDetails,
+        plate: t.plate,
+        switchName: t.switchName,
+        springWeight: t.springWeight,
+        isLubed: t.isLubed,
+        isFilmed: t.isFilmed,
+        otherMods: t.otherMods,
+        keycapsName: t.keycapsName,
+        keycapsMaterial: t.keycapsMaterial,
+        keycapsProfile: t.keycapsProfile,
+        additionalMods: t.additionalMods,
+        createdAt: t.createdAt.toISOString(),
+        username: t.profile.username,
+        profileId: profile.id,
+      },
+    })),
   };
 }
 
@@ -334,6 +386,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               website: profile.website,
             }}
             contributions={data.contributions}
+            soundTests={data.soundTests}
           />
         </div>
       </div>
