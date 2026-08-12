@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: Props) {
 
   try {
     const response = await buildFilterResponse(category);
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=300');
     return response;
   } catch (error) {
     console.error(`Failed to fetch ${category} filters:`, error);

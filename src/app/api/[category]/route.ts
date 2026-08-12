@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'application/x-ndjson; charset=utf-8',
-        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=300',
+        'Cache-Control': 'public, max-age=60, s-maxage=600, stale-while-revalidate=300',
       },
     });
   } catch (error) {

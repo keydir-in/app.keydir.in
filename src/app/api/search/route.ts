@@ -55,6 +55,6 @@ export async function GET(request: NextRequest) {
     vendors: vendors.map((v) => ({ name: v.name, slug: v.slug })),
     brands: brands.map((b) => ({ name: b.name, slug: b.slug })),
   }, {
-    headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600' },
+    headers: { 'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600' },
   });
 }

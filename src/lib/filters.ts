@@ -7,10 +7,7 @@ import { CATEGORY_SPECS, type SpecRowDef } from '@/lib/product-spec-config';
 import { getFilterData } from '@/lib/repositories/product-repository';
 import { unique, extractJsonArray } from '@/lib/utils';
 import { NextResponse } from 'next/server';
-
-// ponytail: global in-memory cache, per-category TTL if scale matters
-const filterCache = new Map<string, { data: Record<string, unknown>; ts: number }>();
-const FILTER_TTL = 300_000;
+import { CACHE, perSlugCache } from '@/lib/cache';
 
 function collectLeafKeys(rows: SpecRowDef[]): { key: string; type: string }[] {
   const result: { key: string; type: string }[] = [];
@@ -58,19 +55,27 @@ export function buildSpecFilters(specs: Record<string, unknown>[], category: str
   return filters;
 }
 
+// One wrapper per category (via perSlugCache) so the cache key explicitly
+// contains the category — keyboards filters can never be served for mouse,
+// regardless of how the runtime composes keys. All entries share the single
+// `filters` tag so any catalog mutation revalidates every category.
+const cachedFilterData = perSlugCache(
+  'filters',
+  300,
+  () => CACHE.filters,
+  async (category: string): Promise<Record<string, unknown>> => {
+    const specSelect = buildSpecSelect(category);
+    const { specs, brandRows, vendorRows, priceRow } = await getFilterData(category, specSelect);
+    const specFilters = buildSpecFilters(specs, category);
+    const brands = unique(brandRows.map((r) => r.brand?.name)).sort();
+    const vendors = unique(vendorRows.map((r) => r.vendor?.name)).sort();
+    const priceMin = Number(priceRow._min.effectivePrice ?? 0);
+    const priceMax = Number(priceRow._max.effectivePrice ?? 0);
+    return { brands, vendors, specs: specFilters, priceMin, priceMax };
+  },
+);
+
 export async function buildFilterResponse(category: string) {
-  const cached = filterCache.get(category);
-  if (cached && Date.now() - cached.ts < FILTER_TTL) {
-    return NextResponse.json(cached.data);
-  }
-  const specSelect = buildSpecSelect(category);
-  const { specs, brandRows, vendorRows, priceRow } = await getFilterData(category, specSelect);
-  const specFilters = buildSpecFilters(specs, category);
-  const brands = unique(brandRows.map((r) => r.brand?.name)).sort();
-  const vendors = unique(vendorRows.map((r) => r.vendor?.name)).sort();
-  const priceMin = Number(priceRow._min.effectivePrice ?? 0);
-  const priceMax = Number(priceRow._max.effectivePrice ?? 0);
-  const data = { brands, vendors, specs: specFilters, priceMin, priceMax } as Record<string, unknown>;
-  filterCache.set(category, { data, ts: Date.now() });
+  const data = await cachedFilterData(category);
   return NextResponse.json(data);
 }

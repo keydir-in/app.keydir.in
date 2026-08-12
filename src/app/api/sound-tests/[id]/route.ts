@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { cloudinary } from '@/lib/cloudinary';
 import { getCurrentUser } from '@/lib/auth/actions';
+import { CACHE, invalidateTags } from '@/lib/cache';
 
 export async function DELETE(
   _request: NextRequest,
@@ -47,6 +48,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 
+  invalidateTags(CACHE.soundTests(test.product.slug));
   revalidatePath(`/products/${test.product.slug}`);
   revalidatePath(`/profile/${test.profile.username}`);
   return NextResponse.json({ ok: true });

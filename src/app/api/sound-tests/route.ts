@@ -5,6 +5,7 @@ import { canUploadSoundTests } from '@/lib/auth/actions';
 import { prisma } from '@/lib/prisma';
 import { cloudinary } from '@/lib/cloudinary';
 import { uploadSoundTest } from '@/lib/services/sound-test-service';
+import { CACHE, invalidateTags } from '@/lib/cache';
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const AUDIO_TYPES = new Set(['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-pn-wav', 'audio/x-m4a', 'audio/mp4']);
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
       throw e;
     });
 
+    invalidateTags(CACHE.soundTests(product.slug));
     revalidatePath(`/products/${product.slug}`);
     return NextResponse.json(
       {

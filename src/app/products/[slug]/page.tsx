@@ -8,7 +8,8 @@ import { BookmarkButton } from '@/components/product/bookmark-button';
 import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
 import { ProductGallery } from '@/components/product/product-gallery';
 import { ProductTabs } from '@/components/product/product-tabs';
-import { findProductBySlug } from '@/lib/repositories/product-repository';
+import { SoundTests } from '@/components/product/sound-tests';
+import { getProductDetail, getSoundTests, getSwitchOptions } from '@/lib/cache/product-page';
 import { resolveBestDeal } from '@/lib/services/coupon-utils';
 import { formatPrice, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
@@ -16,14 +17,12 @@ import { getCurrentUserAndProfile } from '@/lib/profile/actions';
 import { canUploadSoundTests, getCurrentUser } from '@/lib/auth/actions';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
-import type { SoundTestItem } from '@/types';
-import { SoundTests } from '@/components/product/sound-tests';
 
 export const revalidate = 300;
 
-const SOUND_TEST_PAGE_TYPES = new Set(['keyboards', 'switches']);
+const getProduct = cache(getProductDetail);
 
-const getProduct = cache(findProductBySlug);
+const SOUND_TEST_PAGE_TYPES = new Set(['keyboards', 'switches']);
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -31,7 +30,8 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const data = await getProduct(slug);
+  const product = data?.product;
 
   if (!product) return { title: 'Product Not Found' };
 
@@ -60,14 +60,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
 
-  const [product, { profile: currentUser }] = await Promise.all([
+  const [data, { profile: currentUser }] = await Promise.all([
     getProduct(slug),
     getCurrentUserAndProfile(),
   ]);
-
-  if (!product) notFound();
-
   const authUser = await getCurrentUser();
+
+  if (!data) notFound();
+  const { product, switchImages } = data;
 
   // Gallery shows the primary image first (matches listing cards), then any
   // extra ProductImage rows by sortOrder. Falls back to the single image.
@@ -97,19 +97,10 @@ export default async function ProductPage({ params }: Props) {
     })),
   }));
 
-  // Resolve linked switch product images so the Components → Switches cards
-  // can show a thumbnail (vendor-row style) instead of a text-only block.
+  // Resolve linked switch product images (from the cached detail getter) so
+  // the Components → Switches cards can show a thumbnail instead of text.
   const rawSpec: Record<string, unknown> | null = product.keyboardSpec ?? product.switchSpec ?? product.keycapSpec ?? product.mouseSpec;
   const switchOpts = Array.isArray(rawSpec?.switches) ? (rawSpec!.switches as Record<string, unknown>[]) : [];
-  const linkedIds = switchOpts.map((s) => s.linkedSwitchId).filter((x): x is string => typeof x === 'string' && !!x);
-  const switchImages: Record<string, string | null> = {};
-  if (linkedIds.length) {
-    const rows = await prisma.product.findMany({
-      where: { id: { in: linkedIds } },
-      select: { id: true, image: true },
-    });
-    for (const r of rows) switchImages[r.id] = r.image;
-  }
   const spec: Record<string, unknown> | null = rawSpec
     ? { ...rawSpec, switches: switchOpts.map((s) => ({ ...s, image: s.image ?? switchImages[s.linkedSwitchId as string] ?? null })) }
     : null;
@@ -129,11 +120,7 @@ export default async function ProductPage({ params }: Props) {
     inCollection = !!collectionItem;
   }
 
-  const soundTestRows = await prisma.soundTest.findMany({
-    where: { productId: product.id },
-    orderBy: { createdAt: 'desc' },
-    include: { profile: { select: { username: true } }, switchProduct: { select: { name: true } } },
-  });
+  const soundTests = await getSoundTests(slug);
 
   const canUploadSoundTest = currentUser
     ? await canUploadSoundTests(currentUser.userId, currentUser.isVerified)
@@ -144,33 +131,7 @@ export default async function ProductPage({ params }: Props) {
     : 0;
 
   // Switch products available for the sound-test switch picker.
-  const switchOptions = await prisma.product.findMany({
-    where: { productType: 'switches', status: 'active' },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  });
-
-  const soundTests: SoundTestItem[] = soundTestRows.map((st) => ({
-    id: st.id,
-    audioUrl: st.audioUrl,
-    duration: st.duration,
-    keyboardName: st.keyboardName,
-    foamUsed: st.foamUsed,
-    pcbDetails: st.pcbDetails,
-    plate: st.plate,
-    switchName: st.switchProduct?.name ?? st.switchName,
-    springWeight: st.springWeight,
-    isLubed: st.isLubed,
-    isFilmed: st.isFilmed,
-    otherMods: st.otherMods,
-    keycapsName: st.keycapsName,
-    keycapsMaterial: st.keycapsMaterial,
-    keycapsProfile: st.keycapsProfile,
-    additionalMods: st.additionalMods,
-    createdAt: st.createdAt.toISOString(),
-    username: st.profile.username,
-    profileId: st.profileId,
-  }));
+  const switchOptions = await getSwitchOptions();
 
   const { upvotes, downvotes } = computeVoteStats(product.votes);
   const vendorCount = serializedVendorProducts.length;
