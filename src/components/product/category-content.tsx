@@ -5,8 +5,14 @@
  * product listing via custom hooks. Category config is resolved from
  * @/lib/config/category-config; a viewport check picks the desktop sidebar
  * or mobile drawer for the shared filter panel.
+ *
+ * The server-rendered initial grid arrives as `children` (a server component
+ * that streams the seeded products in small Suspense batches). While the
+ * client seed is still current (`usingSeed`), that grid is rendered as-is so
+ * the streamed HTML hydrates in place; once a filter/sort/page change drops
+ * the seed, the client-side NDJSON grid takes over.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { SubmitProductCTA } from '@/components/layout/submit-product-cta';
 import { ProductCard } from '@/components/product/product-card';
 import { EmptyCategory } from '@/components/product/empty-category';
@@ -20,6 +26,7 @@ import type { SortOption } from '@/types';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useProductListing } from '@/hooks/use-product-listing';
 import { getCategoryConfig, type CategoryConfig } from '@/lib/config/category-config';
+import type { ListingSeed } from '@/lib/services/catalog-query';
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => {
@@ -41,19 +48,23 @@ interface CategoryContentProps {
   category: CategoryConfig['slug'];
   banners?: Banner[];
   totalCount?: number;
+  initialData?: ListingSeed;
+  /** Server-rendered, Suspense-streamed initial grid (seed data only). */
+  children?: ReactNode;
 }
 
-export function CategoryContent({ category, banners = [], totalCount = 0 }: CategoryContentProps) {
+export function CategoryContent({ category, banners = [], totalCount = 0, initialData, children }: CategoryContentProps) {
   const config = getCategoryConfig(category);
   if (!config) throw new Error(`Unknown category: ${category}`);
 
   const filters = useCatalogFilters({ category });
 
-  const { products, total, setPage, pageSize, loading, error, retry, page, totalPages } = useProductListing({
+  const { products, total, setPage, pageSize, usingSeed, loading, error, retry, page, totalPages } = useProductListing({
     category,
     q: filters.q,
     sort: filters.sort as SortOption,
     applied: filters.applied,
+    initialData,
   });
 
   const isMobile = useMediaQuery('(max-width: 767px)');
@@ -118,6 +129,11 @@ export function CategoryContent({ category, banners = [], totalCount = 0 }: Cate
                 <div className="catalog-empty-title">Something went wrong</div>
                 <p className="catalog-empty-desc">{error}</p>
                 <button type="button" onClick={retry} className="btn-secondary">Try Again</button>
+              </div>
+            ) : usingSeed && children ? (
+              <div className="catalog-product-area">
+                {children}
+                <Pagination page={page} totalPages={totalPages} />
               </div>
             ) : showSkeleton ? (
               <div className="catalog-product-area">

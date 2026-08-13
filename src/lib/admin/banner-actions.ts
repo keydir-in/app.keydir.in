@@ -10,6 +10,8 @@ import { requireAdmin } from '@/lib/admin/admin-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { BANNERS_TAG, queryBannersForLocation } from '@/lib/services/catalog-banners';
+import { invalidateTags } from '@/lib/cache';
 
 const LOCATIONS = ['home', 'keyboards', 'switches', 'keycaps', 'mouse', 'vendors', 'builders', 'brands', 'search', 'guide', 'about'] as const;
 
@@ -65,6 +67,7 @@ export async function createBanner(formData: FormData) {
     },
   });
 
+  invalidateTags(BANNERS_TAG);
   revalidatePath('/admin/banners');
   redirect('/admin/banners');
 }
@@ -102,6 +105,7 @@ export async function updateBanner(id: string, formData: FormData) {
     },
   });
 
+  invalidateTags(BANNERS_TAG);
   revalidatePath('/');
   revalidatePath('/keyboards');
   revalidatePath('/admin/banners');
@@ -113,6 +117,7 @@ export async function deleteBanner(id: string) {
   if (!admin) return { error: 'not_authorized' };
 
   await prisma.banner.delete({ where: { id } });
+  invalidateTags(BANNERS_TAG);
   revalidatePath('/admin/banners');
 }
 
@@ -121,6 +126,7 @@ export async function toggleBanner(id: string, status: string) {
   if (!admin) return { error: 'not_authorized' };
 
   await prisma.banner.update({ where: { id }, data: { status } });
+  invalidateTags(BANNERS_TAG);
   revalidatePath('/admin/banners');
 }
 
@@ -146,6 +152,7 @@ export async function duplicateBanner(id: string) {
     },
   });
 
+  invalidateTags(BANNERS_TAG);
   revalidatePath('/admin/banners');
 }
 
@@ -164,27 +171,5 @@ export async function trackBannerClick(id: string) {
 }
 
 export async function getBannersForLocation(location: string) {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return prisma.banner.findMany({
-    where: {
-      status: 'active',
-      displayRule: { not: 'mobile' },
-      locations: { some: { location } },
-      OR: [{ startDate: null }, { startDate: { lte: now } }],
-      AND: [{ OR: [{ endDate: null }, { endDate: { gte: todayStart } }] }],
-    },
-    orderBy: { priority: 'asc' },
-    select: {
-      id: true,
-      title: true,
-      desktopImage: true,
-      mobileImage: true,
-      linkUrl: true,
-      linkType: true,
-      openNewTab: true,
-      bannerType: true,
-      displayRule: true,
-    },
-  });
+  return queryBannersForLocation(location);
 }

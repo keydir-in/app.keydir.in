@@ -12,12 +12,21 @@ const REPORT_TYPES = new Set<ReportType>(['PAGE_ISSUE', 'PRODUCT_ISSUE', 'SOUND_
 const PRODUCT_REASONS = new Set(['INCORRECT_SPECS', 'MISSING_INFO', 'WRONG_PRICING', 'DUPLICATE_PRODUCT', 'BROKEN_LINKS', 'OTHER']);
 const MAX_PER_HOUR = 5;
 const HOUR_MS = 60 * 60 * 1000;
+const MAX_BODY_BYTES = 64 * 1024;
+const MAX_PAGE_URL = 2048;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Reject oversized bodies before JSON.parse — content-length is untrusted
+  // but a huge claim here only makes us refuse earlier than necessary.
+  const contentLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 });
   }
 
   try {
@@ -38,6 +47,9 @@ export async function POST(request: NextRequest) {
     }
     if (!pageUrl) {
       return NextResponse.json({ error: 'Page URL is required' }, { status: 400 });
+    }
+    if (pageUrl.length > MAX_PAGE_URL) {
+      return NextResponse.json({ error: 'Page URL is too long' }, { status: 400 });
     }
     if (type === 'PRODUCT_ISSUE') {
       if (!reason || !PRODUCT_REASONS.has(reason)) {

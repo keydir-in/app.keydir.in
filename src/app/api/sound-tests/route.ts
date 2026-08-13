@@ -8,6 +8,10 @@ import { uploadSoundTest } from '@/lib/services/sound-test-service';
 import { CACHE, invalidateTags } from '@/lib/cache';
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+// Audio is capped at 2MB; allow headroom for the multipart form + text fields
+// so a valid upload never bounces, but stop a multi-GB body before formData()
+// buffers it all in memory.
+const MAX_FORM_BYTES = 4 * 1024 * 1024;
 const AUDIO_TYPES = new Set(['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-pn-wav', 'audio/x-m4a', 'audio/mp4']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a']);
 const SOUND_TEST_TYPES = new Set(['keyboards', 'switches']);
@@ -37,6 +41,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Reject oversized multipart bodies before formData() reads them into memory.
+    const contentLength = Number(request.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > MAX_FORM_BYTES) {
+      return NextResponse.json({ error: 'Request too large' }, { status: 413 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('audio') as File | null;
     const productId = (formData.get('productId') as string) || '';
@@ -120,6 +130,7 @@ export async function POST(request: NextRequest) {
 
     invalidateTags(CACHE.soundTests(product.slug));
     revalidatePath(`/products/${product.slug}`);
+    revalidatePath(`/profile/${profile!.username}`);
     return NextResponse.json(
       {
         id: record.id,

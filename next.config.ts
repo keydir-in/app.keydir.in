@@ -53,6 +53,21 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: isDev ? ["192.168.0.69"] : [],
+  cacheComponents: true,
+  // Partial prefetching: Links prefetch only the static shell of a route, so
+  // category navigation is instant without prefetching every filter combo.
+  partialPrefetching: true,
+  // Catalog data freshness (seconds). stale = served directly; revalidate =
+  // background SWR window; expire = hard cutoff. On-demand revalidation via
+  // /api/revalidate overrides time-based expiry for all of these.
+  cacheLife: {
+    // Listings + sound tests + home page sections. ~60s fresh.
+    catalog: { stale: 60, revalidate: 300, expire: 3600 },
+    // Filter facet data (brands/vendors/specs/price bounds). ~5min fresh.
+    filters: { stale: 300, revalidate: 300, expire: 3600 },
+    // Switch picker list. ~10min fresh.
+    options: { stale: 600, revalidate: 600, expire: 7200 },
+  },
   devIndicators: false,
   poweredByHeader: false,
   serverExternalPackages: ['playwright', 'cheerio'],

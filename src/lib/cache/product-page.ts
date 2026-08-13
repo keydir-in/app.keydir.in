@@ -3,8 +3,14 @@
  * per request; caching it (plus the sound-test list and the switch picker)
  * turns repeat visits into data-cache reads. Per-slug tags let price/spec/
  * coupon/sound-test mutations invalidate exactly one product's entries.
+ *
+ * Product detail stays on the durable per-slug unstable_cache (perSlugCache):
+ * the page is auth-dynamic so the PPR/client-router benefits of an outer
+ * "use cache" scope don't apply, and the Date rehydration it requires would
+ * be re-serialized for no gain. The sound-test list and switch picker are
+ * plain serializable data and do get the outer Cache Components scope.
  */
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, cacheLife, cacheTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { findProductBySlug, type ProductWithDetails } from '@/lib/repositories/product-repository';
 import { CACHE, perSlugCache } from '@/lib/cache';
@@ -108,7 +114,14 @@ async function loadSoundTests(slug: string): Promise<SoundTestItem[]> {
   }));
 }
 
-export const getSoundTests = perSlugCache('sound-tests', 60, CACHE.soundTests, loadSoundTests);
+const rawGetSoundTests = perSlugCache('sound-tests', 60, CACHE.soundTests, loadSoundTests);
+
+export async function getSoundTests(slug: string): Promise<SoundTestItem[]> {
+  'use cache';
+  cacheLife('catalog');
+  cacheTag(CACHE.soundTests(slug));
+  return rawGetSoundTests(slug);
+}
 
 const rawGetSwitchOptions = unstable_cache(
   async (): Promise<SwitchOption[]> =>
@@ -121,4 +134,9 @@ const rawGetSwitchOptions = unstable_cache(
   { revalidate: 600, tags: [CACHE.switchOptions] },
 );
 
-export const getSwitchOptions = (): Promise<SwitchOption[]> => rawGetSwitchOptions();
+export async function getSwitchOptions(): Promise<SwitchOption[]> {
+  'use cache';
+  cacheLife('options');
+  cacheTag(CACHE.switchOptions);
+  return rawGetSwitchOptions();
+}

@@ -14,12 +14,14 @@ import { useSearchParams } from 'next/navigation';
 import type { ProductCard, SortOption } from '@/types';
 import type { CategoryConfig } from '@/lib/config/category-config';
 import { useGridColumns } from '@/hooks/use-grid-columns';
+import { buildListingParams, type ListingSeed } from '@/lib/services/catalog-query';
 
 interface ProductListingOpts {
   category: CategoryConfig['slug'];
   q: string;
   sort: SortOption;
   applied: Record<string, string[]>;
+  initialData?: ListingSeed;
 }
 
 interface ListingData {
@@ -80,18 +82,31 @@ async function readStreamed(
   if (buffer.trim()) parseLine(buffer, onMeta, onProducts);
 }
 
-export function useProductListing({ category, q, sort, applied }: ProductListingOpts) {
+export function useProductListing({ category, q, sort, applied, initialData }: ProductListingOpts) {
   const columns = useGridColumns();
   const pageSize = columns * ROWS_PER_PAGE;
   const productsEndpoint = `/api/${category}`;
   const searchParams = useSearchParams();
   const rawPage = Number.parseInt(searchParams.get('page') || '1', 10);
   const pageFromUrl = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+
+  const query = buildListingParams({ q, sort, page: pageFromUrl, pageSize, applied }).toString();
+  const seedMatches = !!initialData && initialData.query === query;
+  // True only while the URL query still equals the seed query, i.e. no
+  // filter/sort/search/page change has moved the client off the
+  // server-rendered data yet. Derived, not state — the server children grid
+  // is only valid for the exact query the seed was built from.
+  const usingSeed = seedMatches;
+  // The server seed is only valid for the exact query it was built from; once
+  // consumed (any filter/sort/page change) it's dropped and normal fetches
+  // take over.
+  const seedPending = useRef(seedMatches);
+
   const [page, setPage] = useState(pageFromUrl);
-  const [products, setProducts] = useState<ProductCard[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<ProductCard[]>(() => (seedMatches ? initialData!.products : []));
+  const [total, setTotal] = useState(() => (seedMatches ? initialData!.total : 0));
+  const [totalPages, setTotalPages] = useState(() => (seedMatches ? initialData!.totalPages : 1));
+  const [loading, setLoading] = useState(() => !seedMatches);
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -103,17 +118,8 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
-      const p = new URLSearchParams();
-      if (q) p.set('q', q);
-      p.set('sort', sort);
-      p.set('page', String(targetPage));
-      p.set('pageSize', String(pageSize));
-      for (const [k, v] of Object.entries(applied)) {
-        if (k === 'min') p.set('priceMin', v[0]);
-        else if (k === 'max') p.set('priceMax', v[0]);
-        else for (const val of v) p.append(k, val);
-      }
-      const url = `${productsEndpoint}?${p.toString()}`;
+      const params = buildListingParams({ q, sort, page: targetPage, pageSize, applied });
+      const url = `${productsEndpoint}?${params.toString()}`;
       const seq = ++requestSeq.current;
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -184,11 +190,25 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
   );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (seedPending.current) {
+      // The server-rendered grid already holds this exact query; register it
+      // in the LRU so revisiting the same filters later is instant, then skip
+      // the duplicate first fetch.
+      seedPending.current = false;
+      if (initialData) {
+        responseCache.set(`${productsEndpoint}?${initialData.query}`, {
+          products: initialData.products,
+          total: initialData.total,
+          totalPages: initialData.totalPages,
+          pageSize: initialData.pageSize,
+        });
+      }
+      return;
+    }
     fetchPage(page);
     const controller = abortRef.current;
     return () => controller?.abort();
-  }, [fetchPage, page]);
+  }, [fetchPage, page, initialData, productsEndpoint]);
 
   const prevColumns = useRef(columns);
   useEffect(() => {
@@ -209,6 +229,7 @@ export function useProductListing({ category, q, sort, applied }: ProductListing
     setPage,
     totalPages,
     pageSize,
+    usingSeed,
     loading,
     error,
     retry,

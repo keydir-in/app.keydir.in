@@ -193,6 +193,7 @@ Edit `.env` with your configuration. Required variables:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous/public key |
 | `NEXT_PUBLIC_APP_URL` | Application URL (`http://localhost:3000` in dev) |
 | `ADMIN_EMAILS` | Comma-separated admin email addresses |
+| `REVALIDATION_SECRET` | Shared secret for the server-to-server cache revalidation endpoint (`POST /api/revalidate`) — used by the external scraper/admin system |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |

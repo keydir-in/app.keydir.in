@@ -8,7 +8,7 @@
  */
 
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { TouchEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -24,13 +24,6 @@ export function ProductGallery({ images, name }: Props) {
 
   const prev = useCallback(() => setIndex((i) => (i - 1 + count) % count), [count]);
   const next = useCallback(() => setIndex((i) => (i + 1) % count), [count]);
-
-  useEffect(() => {
-    for (let i = 1; i < images.length; i++) {
-      const img = new window.Image();
-      img.src = images[i];
-    }
-  }, [images]);
 
   const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchX.current = e.touches[0].clientX;

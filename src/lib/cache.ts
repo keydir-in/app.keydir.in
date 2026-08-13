@@ -5,7 +5,6 @@
  * wrapper instance (memoized by perSlugCache) carrying its own tag.
  */
 import { revalidateTag, unstable_cache } from 'next/cache';
-import { prisma } from '@/lib/prisma';
 
 export const CACHE = {
   /** Per-product tag, e.g. `product:akko-5075b-plus`. Invalidated on price/spec/image changes. */
@@ -69,29 +68,4 @@ export function perSlugCache<A extends unknown[], T>(
     }
     return wrapped(slug, ...args);
   };
-}
-
-/** Invalidates a product's detail cache from its product id (admin actions). */
-export async function invalidateProductByProductId(productId: string): Promise<void> {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
-  if (product?.slug) invalidateTags(CACHE.product(product.slug));
-}
-
-/**
- * Invalidates the detail cache of every product sold by a vendor. Vendor-wide
- * mutations (enable/disable, rename, coupons) touch many products but never
- * all of them, so this resolves the affected slugs precisely instead of
- * nuking the whole product cache. Runs only inside the Next runtime.
- */
-export async function invalidateProductsByVendor(vendorId: string): Promise<void> {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  const rows = await prisma.vendorProduct.findMany({
-    where: { vendorId },
-    select: { product: { select: { slug: true } } },
-    distinct: ['productId'],
-  });
-  for (const { product } of rows) {
-    if (product.slug) invalidateTags(CACHE.product(product.slug));
-  }
 }

@@ -18,8 +18,6 @@ import { canUploadSoundTests, getCurrentUser } from '@/lib/auth/actions';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
-
 const getProduct = cache(getProductDetail);
 
 const SOUND_TEST_PAGE_TYPES = new Set(['keyboards', 'switches']);

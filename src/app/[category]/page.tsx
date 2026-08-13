@@ -13,9 +13,8 @@ import { getCategoryConfig, CATEGORY_SLUGS } from '@/lib/config/category-config'
 
 interface Props {
   params: Promise<{ category: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
-
-export const revalidate = 300;
 
 export function generateStaticParams() {
   return CATEGORY_SLUGS.map((category) => ({ category }));
@@ -42,13 +41,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const { category } = await params;
   if (!getCategoryConfig(category)) notFound();
 
   return (
     <Suspense fallback={<CatalogSkeletonGrid />}>
-      <CategoryContentPage category={category} />
+      <CategoryContentPage category={category} searchParams={searchParams} />
     </Suspense>
   );
 }

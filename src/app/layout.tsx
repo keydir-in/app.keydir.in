@@ -7,6 +7,7 @@
 
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { Suspense } from 'react';
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -109,7 +110,11 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <ClientShell />
-          <Navbar />
+          {/* PPR: these layout clients read usePathname(), so they need
+              Suspense to stay out of the static shell. */}
+          <Suspense fallback={null}>
+            <Navbar />
+          </Suspense>
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
@@ -143,7 +148,9 @@ export default function RootLayout({
             }}
           />
           <div id="main-content">{children}</div>
-          <AppFooter />
+          <Suspense fallback={null}>
+            <AppFooter />
+          </Suspense>
           <Script
             src="https://cloud.umami.is/script.js"
             data-website-id="daeeffe3-c516-4399-8875-451d8ae110ff"

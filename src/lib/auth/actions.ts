@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -84,12 +85,10 @@ export async function checkAndGrantReward(userId: string) {
 
   if (!providers.has('google') || !providers.has('discord') || !hasPassword) return;
 
-  await prisma.$transaction([
-    prisma.profile.update({
-      where: { userId },
-      data: { voteCredits: profile.voteCredits + 10, voteRewardClaimed: true },
-    }),
-  ]);
+  await prisma.profile.update({
+    where: { userId },
+    data: { voteCredits: profile.voteCredits + 10, voteRewardClaimed: true },
+  });
 }
 
 export async function login(formData: FormData) {
@@ -279,7 +278,7 @@ export async function unlinkProvider(provider: string) {
   redirect('/settings?message=' + encodeURIComponent(`${provider} unlinked`));
 }
 
-export async function getConnectedAccounts() {
+async function _getConnectedAccounts() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -356,6 +355,14 @@ export async function getConnectedAccounts() {
     voteRewardClaimed,
   };
 }
+
+/**
+ * Deduped per request: the settings page calls this three times (hero,
+ * provider section, account details). The result is request/user-specific
+ * account state, so it must never enter a shared data cache — React cache()
+ * scopes it to a single request only.
+ */
+export const getConnectedAccounts = cache(_getConnectedAccounts);
 
 export async function enableEmailLogin(formData: FormData) {
   const supabase = await createClient();

@@ -7,8 +7,8 @@
  * Errors keep a plain JSON body so the client can read them with res.json().
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchProductListings } from '@/lib/services/product-service';
 import { getCategoryConfig } from '@/lib/config/category-config';
+import { cachedListings } from '@/lib/services/catalog-listings';
 
 interface Props {
   params: Promise<{ category: string }>;
@@ -27,11 +27,10 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   const { searchParams } = new URL(request.url);
+  const qs = searchParams.toString();
 
   try {
-    const result = await fetchProductListings(config.slug, searchParams, config.specConfig, {
-      includeUserVotes: false,
-    });
+    const result = await cachedListings(config.slug, qs, config.specConfig);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({

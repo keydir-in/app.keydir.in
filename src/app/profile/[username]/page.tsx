@@ -133,11 +133,16 @@ async function loadProfileData(username: string) {
   // Return plain serializable data (Dates as ISO strings). unstable_cache
   // stores JSON, so without this Date fields would arrive as strings on cache
   // hits but as Dates on misses; converting up front makes both paths identical.
+  //
+  // Security: this payload is SHARED across requests by unstable_cache, so it
+  // must contain ONLY public profile data. userId and voteCredits are account
+  // state, not public display data — they are excluded (the page resolves both
+  // live, request-scoped, on every render). collection/votes/sound tests are
+  // viewable by any visitor and are cached only in their public display form.
   return {
     profile: {
       id: profile.id,
       username: profile.username,
-      userId: profile.userId,
       displayName: profile.displayName,
       bio: profile.bio,
       createdAt: profile.createdAt.toISOString(),
@@ -146,7 +151,6 @@ async function loadProfileData(username: string) {
       reddit: profile.reddit,
       monkeytype: profile.monkeytype,
       website: profile.website,
-      voteCredits: profile.voteCredits,
       collectionCount: profile._count?.collection ?? 0,
       collection: collection.map((c) => ({
         id: c.id,
@@ -229,7 +233,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   const currentUser = await currentUserPromise;
   const profile = data.profile;
-  const isOwner = currentUser?.userId === profile.userId;
+  // userId and voteCredits are account state, excluded from the shared cache.
+  // Resolve both live, request-scoped, so owner detection and the credits
+  // display are always current and never come from a cross-request cache.
+  const liveProfile = await prisma.profile.findUnique({
+    where: { username: profile.username },
+    select: { userId: true, voteCredits: true },
+  });
+  const isOwner = !!liveProfile && currentUser?.userId === liveProfile.userId;
+  const voteCredits = liveProfile?.voteCredits ?? 0;
   const xp = data.xp;
   const rank = getRank(xp);
   const communityBadge = data.badges?.find((ub) => ub.badge.type === 'community');
@@ -350,7 +362,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <span className="profile-stat-label">VOTES</span>
             </div>
             <div className="profile-stat-box">
-              <span className="profile-stat-num">{profile.voteCredits}</span>
+              <span className="profile-stat-num">{voteCredits}</span>
               <span className="profile-stat-label">CREDITS</span>
             </div>
             <div className="profile-stat-box">
@@ -370,7 +382,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             isOwner={isOwner}
             collection={profile.collection}
             votes={data.votes}
-            voteCredits={profile.voteCredits}
+            voteCredits={voteCredits}
             memberSince={new Date(profile.createdAt).getFullYear()}
             rank={rank}
             reputation={xp}

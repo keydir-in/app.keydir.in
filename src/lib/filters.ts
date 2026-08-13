@@ -3,6 +3,7 @@
  * queries distinct filter values from the database, and assembles
  * JSON filter responses for the product listing API.
  */
+import { cacheLife, cacheTag } from 'next/cache';
 import { CATEGORY_SPECS, type SpecRowDef } from '@/lib/product-spec-config';
 import { getFilterData } from '@/lib/repositories/product-repository';
 import { unique, extractJsonArray } from '@/lib/utils';
@@ -55,11 +56,13 @@ export function buildSpecFilters(specs: Record<string, unknown>[], category: str
   return filters;
 }
 
-// One wrapper per category (via perSlugCache) so the cache key explicitly
-// contains the category — keyboards filters can never be served for mouse,
-// regardless of how the runtime composes keys. All entries share the single
-// `filters` tag so any catalog mutation revalidates every category.
-const cachedFilterData = perSlugCache(
+// Two layers, same as catalog-listings: the outer Cache Components scope
+// (cacheLife 'filters' + the shared `filters` tag, which the revalidation
+// endpoint purges) sits on top of the durable per-category unstable_cache
+// entry. Category is an argument to both layers, so keyboards filters can
+// never be served for mouse. All entries share the single `filters` tag so
+// any catalog mutation revalidates every category.
+const rawFilterData = perSlugCache(
   'filters',
   300,
   () => CACHE.filters,
@@ -74,6 +77,13 @@ const cachedFilterData = perSlugCache(
     return { brands, vendors, specs: specFilters, priceMin, priceMax };
   },
 );
+
+export async function cachedFilterData(category: string): Promise<Record<string, unknown>> {
+  'use cache';
+  cacheLife('filters');
+  cacheTag(CACHE.filters);
+  return rawFilterData(category);
+}
 
 export async function buildFilterResponse(category: string) {
   const data = await cachedFilterData(category);

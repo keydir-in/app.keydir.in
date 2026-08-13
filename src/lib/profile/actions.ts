@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/utils';
 import { syncRankBadge } from '@/lib/reputation/actions';
+import { CACHE, invalidateTags } from '@/lib/cache';
 
 async function _getCurrentUserAndProfile() {
   const supabase = await createClient();
@@ -122,16 +123,26 @@ export async function updateProfile(formData: FormData) {
     return val === prefix ? null : val;
   }
 
+  // The profile page renders website/github/discord/monkeytype as raw <a href>.
+  // Only http(s) is safe — a `javascript:` or `data:` scheme turns a profile
+  // visit into stored XSS, so silently drop anything else at write time.
+  const safeHttp = (val: string | null): string | null => {
+    if (!val) return null;
+    const t = val.trim();
+    if (/^https?:\/\//i.test(t) && t.length <= 2048) return val;
+    return null;
+  };
+
   await prisma.profile.update({
     where: { id: profile.id },
     data: {
       displayName,
       bio,
-      github: cleanUrl(github, PREFIXES.github),
-      discord: cleanUrl(discord, PREFIXES.discord),
+      github: safeHttp(cleanUrl(github, PREFIXES.github)),
+      discord: safeHttp(cleanUrl(discord, PREFIXES.discord)),
       reddit: cleanUrl(reddit, PREFIXES.reddit),
-      monkeytype: cleanUrl(monkeytype, PREFIXES.monkeytype),
-      website,
+      monkeytype: safeHttp(cleanUrl(monkeytype, PREFIXES.monkeytype)),
+      website: safeHttp(website),
     },
   });
 
@@ -241,6 +252,19 @@ export async function voteOnProduct(
       await prisma.userXP.create({ data: { profileId: profile.id, xp: newTotal } });
     }
     await syncRankBadge(profile.id);
+  }
+
+  // The vote mutation above is complete. The product detail cache embeds
+  // public vote tallies, so stale it now; the profile/catalog paths below
+  // keep their existing behavior. Only the aggregate counts live in the
+  // shared cache — never this user's vote.
+  const votedProduct = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { slug: true },
+  });
+  if (votedProduct?.slug) {
+    invalidateTags(CACHE.product(votedProduct.slug));
+    revalidatePath(`/products/${votedProduct.slug}`);
   }
 
   revalidatePath('/keyboards');

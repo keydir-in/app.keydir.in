@@ -1,19 +1,20 @@
 /**
- * Homepage for KeyDir. ISR-enabled (revalidate every 300s) with
- * streaming Suspense boundaries. Hero title/subtitle/actions render
- * immediately while data-dependent sections stream in.
+ * Homepage for KeyDir. Cache Components — the whole page is cached with the
+ * `catalog` cacheLife profile (60s fresh, 5m SWR) and tagged so scraper
+ * updates revalidate it on demand. Hero title/subtitle/actions render from
+ * the cached shell while data-dependent sections resolve through Suspense.
  */
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 import { HeroBanner } from '@/components/banner/hero-banner';
 import { LowestPrices } from '@/components/product/lowest-prices';
 import { PriceDrops } from '@/components/product/price-drops';
 import { prisma } from '@/lib/prisma';
-import { getBannersForLocation } from '@/lib/admin/banner-actions';
-
-export const revalidate = 300;
+import { cachedBannersForLocation } from '@/lib/services/catalog-banners';
+import { CATALOG_LISTINGS_TAG } from '@/lib/services/catalog-listings';
 
 export const metadata: Metadata = {
   title: 'KeyDir — Track Mechanical Keyboard Prices Across India',
@@ -117,7 +118,7 @@ async function HeroTerminal({
   );
 }
 
-async function HomeBanners({ promise }: { promise: Promise<Awaited<ReturnType<typeof getBannersForLocation>>> }) {
+async function HomeBanners({ promise }: { promise: Promise<Awaited<ReturnType<typeof cachedBannersForLocation>>> }) {
   const banners = await promise;
   if (banners.length === 0) return null;
   return <HeroBanner banners={banners} />;
@@ -181,8 +182,11 @@ async function FeaturesSection({ promise }: { promise: Promise<ProductTypeCount[
 }
 
 export default async function HomePage() {
+  'use cache';
+  cacheLife('catalog');
+  cacheTag(CATALOG_LISTINGS_TAG);
   const countsPromise = prisma.product.groupBy({ by: ['productType'], _count: true });
-  const bannersPromise = getBannersForLocation('home');
+  const bannersPromise = cachedBannersForLocation('home');
   const metaPromise = Promise.all([prisma.brand.count(), prisma.vendor.count()]);
 
   return (
