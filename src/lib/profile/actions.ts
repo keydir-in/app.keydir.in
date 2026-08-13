@@ -162,8 +162,6 @@ export async function toggleWishlist(productId: string) {
   } else {
     await prisma.wishlist.create({ data: { profileId: profile.id, productId } });
   }
-
-  revalidatePath('/products');
 }
 
 export async function toggleCollection(productId: string) {
@@ -180,7 +178,6 @@ export async function toggleCollection(productId: string) {
     await prisma.collection.create({ data: { profileId: profile.id, productId } });
   }
 
-  revalidatePath('/products');
   revalidatePath(`/profile/${profile.username}`);
 }
 
@@ -259,15 +256,15 @@ export async function voteOnProduct(
   // shared cache — never this user's vote.
   const votedProduct = await prisma.product.findUnique({
     where: { id: productId },
-    select: { slug: true },
+    select: { slug: true, productType: true },
   });
   if (votedProduct?.slug) {
     invalidateTags(CACHE.product(votedProduct.slug));
     revalidatePath(`/products/${votedProduct.slug}`);
   }
-
-  revalidatePath('/keyboards');
-  revalidatePath('/products');
+  if (votedProduct?.productType) {
+    revalidatePath(`/${votedProduct.productType}`);
+  }
   revalidatePath(`/profile/${profile.username}`);
   return { success: true };
 }

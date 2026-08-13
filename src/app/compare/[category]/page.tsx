@@ -8,6 +8,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/profile/actions';
+import { cachedCompareProducts } from '@/lib/services/compare-cache';
 import { CompareClient } from '../compare-client';
 import { CompareLayout } from '@/components/compare/compare-layout';
 import { CATEGORIES } from '../compare-config';
@@ -64,21 +65,7 @@ export default async function CompareCategoryPage({ params, searchParams }: Prop
     : [];
 
   const rawProducts = slugs.length >= 1
-    ? await prisma.product.findMany({
-        where: { slug: { in: slugs }, productType: config.productType },
-        include: {
-          brand: { select: { name: true, slug: true } },
-          ...(((config.specKey === 'keyboardSpec' || config.specKey === 'mouseSpec') ? { [config.specKey]: true } : {}) as Record<string, true>),
-          vendorProducts: {
-            include: {
-              vendor: { select: { name: true, chartColor: true } },
-            },
-            where: { vendor: { enabled: true } },
-            orderBy: { effectivePrice: 'asc' },
-          },
-          votes: { select: { type: true } },
-        },
-      })
+    ? await cachedCompareProducts(slugs, config.productType)
     : [];
 
   const productMap = new Map(rawProducts.map((p) => [p.slug, p]));

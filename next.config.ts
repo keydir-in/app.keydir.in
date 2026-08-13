@@ -73,9 +73,16 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['playwright', 'cheerio'],
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Only hosts the CSP `img-src` allow-list already trusts. `next/image`
+    // re-hosts external URLs as same-origin /_next/image requests, so the CSP
+    // alone would not stop the optimizer from fetching arbitrary domains — the
+    // wildcard here did that for free while paying to process any image.
     remotePatterns: [
-      { protocol: "https", hostname: "**" },
       { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "**.githubusercontent.com" },
+      { protocol: "https", hostname: "**.googleusercontent.com" },
+      { protocol: "https", hostname: "cdn.discordapp.com" },
+      { protocol: "https", hostname: "media.discordapp.net" },
     ],
   },
   headers: async () => [
