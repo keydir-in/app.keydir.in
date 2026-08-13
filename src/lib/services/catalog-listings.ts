@@ -18,6 +18,7 @@
  */
 import { unstable_cache, cacheLife, cacheTag } from 'next/cache';
 import { fetchProductListings } from '@/lib/services/product-service';
+import { prisma } from '@/lib/prisma';
 import type { SpecFilterConfig } from '@/lib/services/spec-filter-builder';
 
 export const CACHE_SECONDS = 60;
@@ -45,4 +46,18 @@ export async function cachedListings(
   cacheLife('catalog');
   cacheTag(CATALOG_LISTINGS_TAG);
   return rawListings(productType, qs, specConfig);
+}
+
+const rawActiveProductCount = unstable_cache(
+  (productType: string) =>
+    prisma.product.count({ where: { productType, status: 'active' } }),
+  ['active-product-count'],
+  { revalidate: CACHE_SECONDS, tags: [CATALOG_LISTINGS_TAG] },
+);
+
+export async function cachedActiveProductCount(productType: string): Promise<number> {
+  'use cache';
+  cacheLife('catalog');
+  cacheTag(CATALOG_LISTINGS_TAG);
+  return rawActiveProductCount(productType);
 }

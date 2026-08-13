@@ -9,15 +9,14 @@
 import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getSupabaseUser } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/utils';
 import { syncRankBadge } from '@/lib/reputation/actions';
 import { CACHE, invalidateTags } from '@/lib/cache';
 
 async function _getCurrentUserAndProfile() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user) return { user: null, profile: null };
   const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
   return { user, profile };

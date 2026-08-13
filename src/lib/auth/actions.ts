@@ -3,7 +3,7 @@
 import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getSupabaseUser } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
 
@@ -20,8 +20,7 @@ export interface VotingEligibility {
 
 export async function isVotingEligible(userId: string): Promise<VotingEligibility> {
   const linked = new Map<string, boolean>();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (user?.identities) {
     for (const identity of user.identities) {
       linked.set(identity.provider, true);
@@ -73,8 +72,7 @@ export async function checkAndGrantReward(userId: string) {
   });
   if (!profile || profile.voteRewardClaimed) return;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user?.identities) return;
 
   const providers = new Set(user.identities.map(i => i.provider));
@@ -279,8 +277,7 @@ export async function unlinkProvider(provider: string) {
 }
 
 async function _getConnectedAccounts() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user) return null;
 
   const identities = user.identities;
@@ -571,8 +568,7 @@ function resolveAvatarUrl(user: {
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user) return null;
 
   const adminEmails = (process.env.ADMIN_EMAILS || '')

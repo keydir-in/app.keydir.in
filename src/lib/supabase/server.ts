@@ -4,6 +4,7 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -29,3 +30,18 @@ export async function createClient() {
     }
   );
 }
+
+/**
+ * One request-scoped source of truth for the signed-in user. Every helper
+ * that needs `supabase.auth.getUser()` (getCurrentUserAndProfile,
+ * getCurrentUser, isVotingEligible, checkAndGrantReward, getConnectedAccounts,
+ * settings page) routes through this, so a render that touches several of
+ * them makes a single Supabase JWT verification round trip instead of one
+ * per helper. React cache() scopes the dedup to a single request only —
+ * user identity must never enter a shared data cache.
+ */
+export const getSupabaseUser = cache(async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+});

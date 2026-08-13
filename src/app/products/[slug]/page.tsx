@@ -118,18 +118,17 @@ export default async function ProductPage({ params }: Props) {
     inCollection = !!collectionItem;
   }
 
-  const soundTests = await getSoundTests(slug);
-
-  const canUploadSoundTest = currentUser
-    ? await canUploadSoundTests(currentUser.userId, currentUser.isVerified)
-    : false;
-
-  const userSoundTestCount = currentUser
-    ? await prisma.soundTest.count({ where: { profileId: currentUser.id } })
-    : 0;
-
-  // Switch products available for the sound-test switch picker.
-  const switchOptions = await getSwitchOptions();
+  // Independent reads — batch so total latency is the slowest one, not the sum.
+  const [soundTests, canUploadSoundTest, userSoundTestCount, switchOptions] = await Promise.all([
+    getSoundTests(slug),
+    currentUser
+      ? canUploadSoundTests(currentUser.userId, currentUser.isVerified)
+      : Promise.resolve(false),
+    currentUser
+      ? prisma.soundTest.count({ where: { profileId: currentUser.id } })
+      : Promise.resolve(0),
+    getSwitchOptions(),
+  ]);
 
   const { upvotes, downvotes } = computeVoteStats(product.votes);
   const vendorCount = serializedVendorProducts.length;

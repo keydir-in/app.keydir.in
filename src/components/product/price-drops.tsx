@@ -4,9 +4,9 @@
  */
 
 import { PriceDropsClient } from './price-drops-client';
-import { fetchPriceDrops } from '@/lib/services/product-service';
+import { cachedPriceDrops } from '@/lib/services/home-sections';
 
 export async function PriceDrops() {
-  const items = await fetchPriceDrops(12);
+  const items = await cachedPriceDrops(12);
   return <PriceDropsClient items={items} />;
 }

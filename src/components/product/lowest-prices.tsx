@@ -5,10 +5,10 @@
  */
 
 import { LowestPricesClient } from './lowest-prices-client';
-import { fetchLowestPrices } from '@/lib/services/product-service';
+import { cachedLowestPrices } from '@/lib/services/home-sections';
 
 export async function LowestPrices() {
-  const items = await fetchLowestPrices();
+  const items = await cachedLowestPrices();
   if (items.length === 0) return null;
   return <LowestPricesClient items={items} />;
 }

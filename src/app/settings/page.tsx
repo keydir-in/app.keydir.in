@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ConnectedAccounts } from '@/components/auth/connected-accounts';
 import { getConnectedAccounts } from '@/lib/auth/actions';
-import { createClient } from '@/lib/supabase/server';
+import { getSupabaseUser } from '@/lib/supabase/server';
 import { getCurrentUserAndProfile } from '@/lib/profile/actions';
 import { prisma } from '@/lib/prisma';
 
@@ -52,8 +52,7 @@ async function ConnectedProvidersSection({
 }
 
 async function AccountDetailsSection() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user) return null;
 
   const { profile } = await getCurrentUserAndProfile();
@@ -106,8 +105,7 @@ export default async function SettingsPage({
 }) {
   const params = await searchParams;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUser();
   if (!user) redirect('/auth/login');
 
   const { profile } = await getCurrentUserAndProfile();

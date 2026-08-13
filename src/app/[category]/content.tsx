@@ -11,13 +11,12 @@
  * duplicate first NDJSON request and hydrate the already-streamed cards.
  */
 import { Suspense } from 'react';
-import { prisma } from '@/lib/prisma';
 import { cachedBannersForLocation } from '@/lib/services/catalog-banners';
 import { getCategoryConfig } from '@/lib/config/category-config';
 import { CategoryContent } from '@/components/product/category-content';
 import { ProductCard } from '@/components/product/product-card';
 import { ProductCardSkeleton } from '@/components/skeleton';
-import { cachedListings } from '@/lib/services/catalog-listings';
+import { cachedActiveProductCount, cachedListings } from '@/lib/services/catalog-listings';
 import { buildListingQueryFromSearchParams, type ListingSeed } from '@/lib/services/catalog-query';
 import type { ProductCard as ProductCardType } from '@/types';
 
@@ -89,7 +88,7 @@ export default async function CategoryContentPage({ category, searchParams }: Pr
 
   const [banners, totalCount] = await Promise.all([
     cachedBannersForLocation(config.slug),
-    prisma.product.count({ where: { productType: config.slug, status: 'active' } }),
+    cachedActiveProductCount(config.slug),
   ]);
 
   const query = buildListingQueryFromSearchParams(params, config.defaultSort);
