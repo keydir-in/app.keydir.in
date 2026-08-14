@@ -87,8 +87,15 @@ export const auth = betterAuth({
   plugins: [
     dash({
       apiKey: process.env.BETTER_AUTH_API_KEY || undefined,
-      apiUrl: process.env.BETTER_AUTH_API_URL || undefined,
-      kvUrl: process.env.BETTER_AUTH_KV_URL || undefined,
+      // Omit apiUrl/kvUrl when unset so the plugin falls back to its own
+      // INFRA_API_URL / INFRA_KV_URL defaults (passing `undefined` here
+      // overrides those defaults and breaks outbound JWKS/KV calls).
+      ...(process.env.BETTER_AUTH_API_URL
+        ? { apiUrl: process.env.BETTER_AUTH_API_URL }
+        : {}),
+      ...(process.env.BETTER_AUTH_KV_URL
+        ? { kvUrl: process.env.BETTER_AUTH_KV_URL }
+        : {}),
     }),
     // Must be the last plugin: sets auth cookies in server actions/RSC.
     nextCookies(),
