@@ -2,20 +2,19 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense, cache } from 'react';
 import { VendorRow } from '@/components/product/vendor-row';
-import { ProductHeroCommunity } from '@/components/product/product-hero-community';
 import { ProductHeroStats } from '@/components/product/product-hero-stats';
-import { BookmarkButton } from '@/components/product/bookmark-button';
 import { ProductHeroSpecs } from '@/components/product/product-hero-specs';
 import { ProductGallery } from '@/components/product/product-gallery';
 import { ProductTabs } from '@/components/product/product-tabs';
-import { SoundTests } from '@/components/product/sound-tests';
-import { getProductDetail, getSoundTests, getSwitchOptions } from '@/lib/cache/product-page';
+import { getProductDetail } from '@/lib/cache/product-page';
 import { resolveBestDeal } from '@/lib/services/coupon-utils';
 import { formatPrice, toNum } from '@/lib/utils';
 import { computeVoteStats } from '@/lib/vote-utils';
-import { getCurrentUserAndProfile } from '@/lib/profile/actions';
-import { canUploadSoundTests, getCurrentUser } from '@/lib/auth/actions';
-import { prisma } from '@/lib/prisma';
+import {
+  ProductBookmark,
+  ProductHeroCommunitySection,
+  SoundTestsSection,
+} from './sections';
 import type { Metadata } from 'next';
 
 const getProduct = cache(getProductDetail);
@@ -58,11 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
 
-  const [data, { profile: currentUser }] = await Promise.all([
-    getProduct(slug),
-    getCurrentUserAndProfile(),
-  ]);
-  const authUser = await getCurrentUser();
+  const data = await getProduct(slug);
 
   if (!data) notFound();
   const { product, switchImages } = data;
@@ -103,33 +98,7 @@ export default async function ProductPage({ params }: Props) {
     ? { ...rawSpec, switches: switchOpts.map((s) => ({ ...s, image: s.image ?? switchImages[s.linkedSwitchId as string] ?? null })) }
     : null;
 
-  let userVote: 'upvote' | 'downvote' | null = null;
-  let inCollection = false;
-  if (currentUser) {
-    const [voteItem, collectionItem] = await Promise.all([
-      prisma.vote.findUnique({
-        where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
-      }),
-      prisma.collection.findUnique({
-        where: { profileId_productId: { profileId: currentUser.id, productId: product.id } },
-      }),
-    ]);
-    userVote = (voteItem?.type as 'upvote' | 'downvote') || null;
-    inCollection = !!collectionItem;
-  }
-
   // Independent reads — batch so total latency is the slowest one, not the sum.
-  const [soundTests, canUploadSoundTest, userSoundTestCount, switchOptions] = await Promise.all([
-    getSoundTests(slug),
-    currentUser
-      ? canUploadSoundTests(currentUser.userId, currentUser.isVerified)
-      : Promise.resolve(false),
-    currentUser
-      ? prisma.soundTest.count({ where: { profileId: currentUser.id } })
-      : Promise.resolve(0),
-    getSwitchOptions(),
-  ]);
-
   const { upvotes, downvotes } = computeVoteStats(product.votes);
   const vendorCount = serializedVendorProducts.length;
 
@@ -298,7 +267,9 @@ export default async function ProductPage({ params }: Props) {
                     )}
                     <h1 className="product-hero-name">{product.name}</h1>
                   </div>
-                  <BookmarkButton productId={product.id} initialSaved={inCollection} />
+                  <Suspense fallback={null}>
+                    <ProductBookmark productId={product.id} />
+                  </Suspense>
                 </div>
 
                 {lowestPrice != null && (
@@ -339,11 +310,10 @@ export default async function ProductPage({ params }: Props) {
                 </div>
 
                 <Suspense fallback={<div className="neo-card product-hero-panel" style={{ height: 160 }}><div className="skeleton-pulse" style={{ height: '100%' }} /></div>}>
-                  <ProductHeroCommunity
+                  <ProductHeroCommunitySection
                     productId={product.id}
                     upvotes={upvotes}
                     downvotes={downvotes}
-                    userVote={userVote}
                     showVoting={product.productType === 'keyboards' || product.productType === 'mouse'}
                   />
                 </Suspense>
@@ -393,19 +363,14 @@ export default async function ProductPage({ params }: Props) {
 
         {/* ═══ SOUND TESTS ═══ */}
         {SOUND_TEST_PAGE_TYPES.has(product.productType) && (
-          <SoundTests
-            productId={product.id}
-            productSlug={product.slug}
-            productName={product.name}
-            productType={product.productType}
-            canUpload={canUploadSoundTest}
-            isLoggedIn={!!currentUser}
-            currentProfileId={currentUser?.id ?? null}
-            isAdmin={authUser?.isAdmin ?? false}
-            items={soundTests}
-            switches={switchOptions}
-            userSoundTestCount={userSoundTestCount}
-          />
+          <Suspense fallback={null}>
+            <SoundTestsSection
+              productId={product.id}
+              productSlug={product.slug}
+              productName={product.name}
+              productType={product.productType}
+            />
+          </Suspense>
         )}
       </div>
     </>
