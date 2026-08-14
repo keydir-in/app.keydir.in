@@ -17,6 +17,8 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "connect-src 'self'",
     "https://*.supabase.co",
     "https://*.supabase.in",
+    "https://api.better-auth.com",
+    "https://dash.better-auth.com",
     "https://vitals.vercel-insights.com",
     "https://va.vercel-scripts.com",
     "https://cloud.umami.is",
@@ -27,6 +29,7 @@ const cspDirectives = isDev ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' 
     "https://*.supabase.co",
     "https://accounts.google.com",
     "https://discord.com",
+    "https://dash.better-auth.com",
   ].join(" "),
   [
     "form-action 'self'",

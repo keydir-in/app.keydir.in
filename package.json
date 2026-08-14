@@ -10,12 +10,15 @@
     "postinstall": "npx prisma generate"
   },
   "dependencies": {
+    "@better-auth/infra": "^0.3.7",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.6.28",
     "cheerio": "^1.2.0",
     "cloudinary": "^2.10.0",
     "lucide-react": "^1.24.0",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Reads searchParams (error/message) directly — opt out of the instant shell.
+export const instant = false;
+
 function SettingsSectionSkeleton() {
   return (
     <div className="stg-section" style={{ minHeight: 120 }}>
@@ -59,11 +62,13 @@ async function AccountDetailsSection() {
   const accounts = await getConnectedAccounts();
   const hasPassword = accounts?.methods.find((m) => m.id === 'password')?.connected ?? false;
 
-  const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const memberSince = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '\u2014';
 
   return (
     <section className="stg-section">

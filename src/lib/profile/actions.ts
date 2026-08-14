@@ -36,13 +36,13 @@ export async function ensureProfile() {
   const existing = await prisma.profile.findUnique({ where: { userId: user.id } });
   if (existing) return existing;
 
-  const username = user.user_metadata?.username || slugify(user.email?.split('@')[0] || 'user');
+  const username = slugify(user.name || user.email?.split('@')[0] || 'user');
 
   const profile = await prisma.profile.create({
     data: {
       userId: user.id,
       username,
-      displayName: user.user_metadata?.full_name || user.user_metadata?.username || null,
+      displayName: user.name || null,
     },
   });
 

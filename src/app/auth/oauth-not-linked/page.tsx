@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: 'OAuth Not Linked | KeyDir',
   robots: { index: false, follow: false },
 };
+// Reads searchParams (provider) directly — opt out of the instant shell.
+export const instant = false;
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { AuthTerminal } from '@/components/auth/auth-terminal';
 

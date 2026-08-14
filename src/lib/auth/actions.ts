@@ -3,10 +3,17 @@
 import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient, getSupabaseUser } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
-
+import { getAuthUser, getBaseURL } from '@/lib/auth/session';
+import {
+  adoptLegacyProfile,
+  getLegacyEligibility,
+  findLegacyUserByEmail,
+  migrateLegacyUser,
+  verifyLegacyPassword,
+} from '@/lib/auth/legacy';
 import { isInternalRoute } from './utils';
 
 export interface VotingEligibility {
@@ -18,24 +25,42 @@ export interface VotingEligibility {
   missingRequirements: string[];
 }
 
-export async function isVotingEligible(userId: string): Promise<VotingEligibility> {
-  const linked = new Map<string, boolean>();
-  const user = await getSupabaseUser();
-  if (user?.identities) {
-    for (const identity of user.identities) {
-      linked.set(identity.provider, true);
-    }
+/**
+ * Dual-source eligibility: Better Auth accounts (providerId `credential` /
+ * `google` / `discord`) are authoritative; the legacy Supabase `auth.users`
+ * + `auth.identities` state is used as a fallback until migrated.
+ */
+async function getProviderState(userId: string) {
+  const baUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  const accounts = await prisma.account.findMany({
+    where: { userId },
+    select: { providerId: true },
+  });
+  const baProviders = new Set(accounts.map((a) => a.providerId));
+
+  let legacy = { hasPassword: false, hasGoogle: false, hasDiscord: false };
+  if (baUser?.email) {
+    legacy = await getLegacyEligibility(baUser.email);
   }
 
-  const rows = await prisma.$queryRaw<{ encrypted_password: string | null }[]>`
-    SELECT encrypted_password FROM auth.users WHERE id = ${userId}
-  `;
-  const hasPassword = !!(rows[0]?.encrypted_password);
-  const hasGoogle = linked.has('google');
-  const hasDiscord = linked.has('discord');
+  return {
+    hasPassword: baProviders.has('credential') || legacy.hasPassword,
+    hasGoogle: baProviders.has('google') || legacy.hasGoogle,
+    hasDiscord: baProviders.has('discord') || legacy.hasDiscord,
+  };
+}
 
-  const profile = await prisma.profile.findUnique({ where: { userId }, select: { username: true } });
-  const hasProfile = !!profile?.username;
+export async function isVotingEligible(userId: string): Promise<VotingEligibility> {
+  const [state, profile] = await Promise.all([
+    getProviderState(userId),
+    prisma.profile.findUnique({ where: { userId }, select: { username: true } }),
+  ]);
+
+  const hasProfile = Boolean(profile?.username);
+  const { hasPassword, hasGoogle, hasDiscord } = state;
 
   const missingRequirements: string[] = [];
   if (!hasPassword) missingRequirements.push('Password Login');
@@ -53,12 +78,6 @@ export async function isVotingEligible(userId: string): Promise<VotingEligibilit
   };
 }
 
-/**
- * Whether a user can upload sound tests: admin-verified profiles always
- * can; otherwise the account must be fully set up (password + Google +
- * Discord + completed profile) — the same "Auth Status: ELIGIBLE" state
- * that unlocks voting.
- */
 export async function canUploadSoundTests(userId: string, isVerified: boolean): Promise<boolean> {
   if (isVerified) return true;
   const eligibility = await isVotingEligible(userId);
@@ -72,16 +91,8 @@ export async function checkAndGrantReward(userId: string) {
   });
   if (!profile || profile.voteRewardClaimed) return;
 
-  const user = await getSupabaseUser();
-  if (!user?.identities) return;
-
-  const providers = new Set(user.identities.map(i => i.provider));
-  const rows = await prisma.$queryRaw<{ encrypted_password: string | null }[]>`
-    SELECT encrypted_password FROM auth.users WHERE id = ${userId}
-  `;
-  const hasPassword = !!(rows[0]?.encrypted_password);
-
-  if (!providers.has('google') || !providers.has('discord') || !hasPassword) return;
+  const state = await getProviderState(userId);
+  if (!state.hasPassword || !state.hasGoogle || !state.hasDiscord) return;
 
   await prisma.profile.update({
     where: { userId },
@@ -89,43 +100,66 @@ export async function checkAndGrantReward(userId: string) {
   });
 }
 
-export async function login(formData: FormData) {
-  const supabase = await createClient();
+function loginError(message: string) {
+  return '/auth/login?error=' + encodeURIComponent(message);
+}
 
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+export async function login(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const password = String(formData.get('password') ?? '');
   const next = formData.get('next') as string;
   const safeNext = next && isInternalRoute(next) ? next : '/';
 
-  const accountExists = await prisma.$queryRaw<{ id: string; confirmed_at: string | null }[]>`
-    SELECT id, confirmed_at FROM auth.users WHERE email = ${email} LIMIT 1
-  `;
-
-  if (accountExists.length === 0) {
-    redirect('/auth/register?error=' + encodeURIComponent('No account found with this email. Please register first.'));
+  if (!email || !password) {
+    redirect(loginError('Please enter your email and password'));
   }
 
-  const account = accountExists[0];
-  if (!account.confirmed_at) {
-    redirect('/auth/verify-email');
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes('email not confirmed') || msg.includes('not confirmed')) {
-      redirect('/auth/verify-email');
-    }
-    redirect('/auth/login?error=' + encodeURIComponent(error.message));
-  }
-
-  const profile = await prisma.profile.findUnique({
-    where: { userId: account.id },
-    select: { registrationComplete: true },
+  const baUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
   });
-  if (profile && !profile.registrationComplete) {
-    redirect('/auth/complete-registration');
+  const legacy = await findLegacyUserByEmail(email);
+
+  if (!baUser && !legacy) {
+    redirect(
+      '/auth/register?error=' +
+        encodeURIComponent('No account found with this email. Please register first.'),
+    );
+  }
+
+  // Legacy-only user: verify the old bcrypt hash, then migrate to Better Auth.
+  if (!baUser && legacy) {
+    if (!legacy.encryptedPassword && legacy.providerIds.includes('google')) {
+      redirect(
+        loginError(
+          'This account was created with Google. Please sign in with Google to continue.',
+        ),
+      );
+    }
+    const ok = await verifyLegacyPassword(email, password);
+    if (!ok) redirect(loginError('Invalid email or password'));
+    await migrateLegacyUser(email, password);
+  }
+
+  let sessionUser: { id: string } | undefined;
+  try {
+    const result = await auth.api.signInEmail({
+      body: { email, password },
+      headers: await headers(),
+    });
+    sessionUser = result.user;
+  } catch {
+    redirect(loginError('Invalid email or password'));
+  }
+
+  if (sessionUser) {
+    const profile = await prisma.profile.findUnique({
+      where: { userId: sessionUser.id },
+      select: { registrationComplete: true },
+    });
+    if (profile && !profile.registrationComplete) {
+      redirect('/auth/complete-registration');
+    }
   }
 
   revalidatePath('/', 'layout');
@@ -133,12 +167,10 @@ export async function login(formData: FormData) {
 }
 
 export async function register(formData: FormData) {
-  const supabase = await createClient();
-
-  const email = formData.get('email') as string;
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = formData.get('password') as string;
   const confirmPassword = formData.get('confirmPassword') as string;
-  const username = formData.get('username') as string;
+  const username = (formData.get('username') as string)?.toLowerCase().trim();
 
   if (formData.get('consent') !== 'true') {
     redirect('/auth/register?error=' + encodeURIComponent('You must agree to the Terms of Service and Privacy Policy before creating an account'));
@@ -148,7 +180,7 @@ export async function register(formData: FormData) {
     redirect('/auth/register?error=' + encodeURIComponent('Passwords do not match'));
   }
 
-  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+  if (!username || !/^[a-z0-9_]{3,20}$/.test(username)) {
     redirect('/auth/register?error=' + encodeURIComponent('Username must be 3-20 characters: lowercase letters, numbers, or underscores'));
   }
 
@@ -157,35 +189,27 @@ export async function register(formData: FormData) {
     redirect('/auth/register?error=' + encodeURIComponent('Username already taken'));
   }
 
-  const existingProfile = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT p.id FROM "Profile" p
-    JOIN auth.users u ON u.id = p."userId"::uuid
-    WHERE u.email = ${email} LIMIT 1
-  `;
-  if (existingProfile.length > 0) {
+  const baUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  const legacy = await findLegacyUserByEmail(email);
+  if (baUser || legacy) {
     redirect('/auth/login?error=' + encodeURIComponent('An account with this email already exists. Please login instead.'));
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { username },
-    },
-  });
-
-  if (error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes('rate') || msg.includes('limit') || msg.includes('too many')) {
-      redirect('/auth/register?error=' + encodeURIComponent('Too many attempts. Please wait a few minutes and try again.'));
-    }
-    redirect('/auth/register?error=' + encodeURIComponent(error.message));
+  let newUserId: string | undefined;
+  try {
+    const result = await auth.api.signUpEmail({
+      body: { name: username, email, password },
+      headers: await headers(),
+    });
+    newUserId = result.user.id;
+  } catch {
+    redirect('/auth/register?error=' + encodeURIComponent('Registration failed. Please try again.'));
   }
 
-  if (data?.user) {
+  if (newUserId) {
     await prisma.profile.create({
       data: {
-        userId: data.user.id,
+        userId: newUserId,
         username,
         displayName: username,
         registrationComplete: true,
@@ -193,44 +217,62 @@ export async function register(formData: FormData) {
         consentVersion: 'v1',
       },
     });
-    await supabase.auth.updateUser({
-      data: { registration_complete: true },
-    });
   }
 
-  redirect('/auth/verify-email');
+  revalidatePath('/', 'layout');
+  redirect('/');
 }
 
 export async function logout() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await auth.api.signOut({ headers: await headers() });
+  revalidatePath('/', 'layout');
   redirect('/');
 }
 
 export async function signInWithGoogle(next?: string) {
-  const supabase = await createClient();
   const safeNext = next && isInternalRoute(next) ? next : '/';
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(safeNext)}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo },
-  });
+  const callbackURL =
+    `${getBaseURL()}/auth/complete-registration?next=${encodeURIComponent(safeNext)}`;
 
-  if (error) redirect('/auth/login?error=' + encodeURIComponent(error.message));
-  if (data.url) redirect(data.url);
+  let result;
+  try {
+    result = await auth.api.signInSocial({
+      body: {
+        provider: 'google',
+        callbackURL,
+        errorCallbackURL: `${getBaseURL()}/auth/login?error=oauth_failed`,
+      },
+      headers: await headers(),
+    });
+  } catch {
+    redirect('/auth/login?error=oauth_failed');
+  }
+
+  if (result.url) redirect(result.url);
+  redirect('/auth/login?error=oauth_failed');
 }
 
 export async function signInWithDiscord(next?: string) {
-  const supabase = await createClient();
   const safeNext = next && isInternalRoute(next) ? next : '/';
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(safeNext)}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'discord',
-    options: { redirectTo },
-  });
+  const callbackURL =
+    `${getBaseURL()}/auth/complete-registration?next=${encodeURIComponent(safeNext)}`;
 
-  if (error) redirect('/auth/login?error=' + encodeURIComponent(error.message));
-  if (data.url) redirect(data.url);
+  let result;
+  try {
+    result = await auth.api.signInSocial({
+      body: {
+        provider: 'discord',
+        callbackURL,
+        errorCallbackURL: `${getBaseURL()}/auth/login?error=oauth_failed`,
+      },
+      headers: await headers(),
+    });
+  } catch {
+    redirect('/auth/login?error=oauth_failed');
+  }
+
+  if (result.url) redirect(result.url);
+  redirect('/auth/login?error=oauth_failed');
 }
 
 export async function linkProviderAction(provider: string) {
@@ -238,38 +280,54 @@ export async function linkProviderAction(provider: string) {
 }
 
 export async function linkProvider(provider: 'google' | 'discord') {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.linkIdentity({
-    provider,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/settings`,
-    },
-  });
+  let result;
+  try {
+    result = await auth.api.linkSocialAccount({
+      body: {
+        provider,
+        callbackURL: `${getBaseURL()}/settings`,
+      },
+      headers: await headers(),
+    });
+  } catch {
+    redirect('/settings?error=' + encodeURIComponent('Provider is not configured yet'));
+  }
 
-  if (error) redirect('/settings?error=' + encodeURIComponent(error.message));
-  if (data.url) redirect(data.url);
+  if (result.url) redirect(result.url);
+  redirect('/settings?error=' + encodeURIComponent('Failed to link provider'));
+}
+
+async function countAllMethods(userId: string, email: string) {
+  const accounts = await prisma.account.findMany({
+    where: { userId },
+    select: { providerId: true },
+  });
+  const baSet = new Set(accounts.map((a) => a.providerId));
+  const legacy = await getLegacyEligibility(email);
+  const total = new Set<string>();
+  for (const p of baSet) total.add(p);
+  if (legacy.hasPassword) total.add('credential');
+  if (legacy.hasGoogle) total.add('google');
+  if (legacy.hasDiscord) total.add('discord');
+  return { baSet, total };
 }
 
 export async function unlinkProvider(provider: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/auth/login');
 
-  const identities = user.identities;
-
-  if (!identities || identities.length <= 1) {
+  const { total } = await countAllMethods(user.id, user.email ?? '');
+  if (total.size <= 1) {
     redirect('/settings?error=' + encodeURIComponent('Cannot unlink your last authentication method'));
   }
 
-  const identity = identities.find((i) => i.provider === provider);
-  if (!identity) {
+  try {
+    await auth.api.unlinkAccount({
+      body: { providerId: provider },
+      headers: await headers(),
+    });
+  } catch {
     redirect('/settings?error=' + encodeURIComponent('Provider not connected'));
-  }
-
-  const { error } = await supabase.auth.unlinkIdentity(identity);
-
-  if (error) {
-    redirect('/settings?error=' + encodeURIComponent(error.message));
   }
 
   revalidatePath('/settings');
@@ -277,33 +335,27 @@ export async function unlinkProvider(provider: string) {
 }
 
 async function _getConnectedAccounts() {
-  const user = await getSupabaseUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
-  const identities = user.identities;
+  const accounts = await prisma.account.findMany({
+    where: { userId: user.id },
+    select: { providerId: true },
+  });
+  const baProviders = new Set(accounts.map((a) => a.providerId));
+  const legacy = await getLegacyEligibility(user.email ?? '');
 
-  const linked = new Map<string, { email?: string; username?: string; lastUsedAt?: string }>();
-  if (identities) {
-    for (const identity of identities) {
-      linked.set(identity.provider, {
-        email: (identity.identity_data?.email as string | undefined) ?? undefined,
-        username:
-          (identity.identity_data?.full_name as string | undefined) ??
-          (identity.identity_data?.username as string | undefined) ??
-          undefined,
-        lastUsedAt: identity.last_sign_in_at ?? undefined,
-      });
-    }
-  }
+  const hasPassword = baProviders.has('credential') || legacy.hasPassword;
+  const googleConnected = baProviders.has('google') || legacy.hasGoogle;
+  const discordConnected = baProviders.has('discord') || legacy.hasDiscord;
+  const emailConnected = Boolean(user.email) || hasPassword;
 
-  const rows = await prisma.$queryRaw<{ encrypted_password: string | null }[]>`
-    SELECT encrypted_password FROM auth.users WHERE id = ${user.id}
-  `;
-  const hasPassword = !!(rows[0]?.encrypted_password);
-
-  const emailConnected = linked.has('email') || hasPassword;
-  const googleConnected = linked.has('google');
-  const discordConnected = linked.has('discord');
+  const lastSession = await prisma.session.findFirst({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    select: { createdAt: true },
+  });
+  const lastUsedAt = lastSession?.createdAt.toISOString();
 
   const profileRow = await prisma.profile.findUnique({
     where: { userId: user.id },
@@ -312,11 +364,11 @@ async function _getConnectedAccounts() {
   const voteCredits = profileRow?.voteCredits ?? 0;
   const voteRewardClaimed = profileRow?.voteRewardClaimed ?? false;
 
-  const votingEligible = emailConnected && googleConnected && discordConnected;
+  const votingEligible = hasPassword && googleConnected && discordConnected;
 
   const oauthEmails: { email: string; provider: string }[] = [];
-  if (linked.get('google')?.email) oauthEmails.push({ email: linked.get('google')!.email!, provider: 'google' });
-  if (linked.get('discord')?.email) oauthEmails.push({ email: linked.get('discord')!.email!, provider: 'discord' });
+  if (googleConnected && user.email) oauthEmails.push({ email: user.email, provider: 'google' });
+  if (discordConnected && user.email) oauthEmails.push({ email: user.email, provider: 'discord' });
 
   return {
     hasPassword,
@@ -330,21 +382,19 @@ async function _getConnectedAccounts() {
         id: 'password' as const,
         name: 'Password Login',
         connected: hasPassword,
-        lastUsedAt: hasPassword ? (user.last_sign_in_at ?? undefined) : undefined,
+        lastUsedAt: hasPassword ? lastUsedAt : undefined,
       },
       {
         id: 'google' as const,
         name: 'Google',
         connected: googleConnected,
-        email: linked.get('google')?.email,
-        lastUsedAt: linked.get('google')?.lastUsedAt,
+        email: googleConnected ? (user.email ?? undefined) : undefined,
       },
       {
         id: 'discord' as const,
         name: 'Discord',
         connected: discordConnected,
-        email: linked.get('discord')?.email ?? linked.get('discord')?.username,
-        lastUsedAt: linked.get('discord')?.lastUsedAt,
+        email: discordConnected ? (user.email ?? undefined) : undefined,
       },
     ],
     votingEligible,
@@ -362,8 +412,7 @@ async function _getConnectedAccounts() {
 export const getConnectedAccounts = cache(_getConnectedAccounts);
 
 export async function enableEmailLogin(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/auth/login');
 
   const password = formData.get('password') as string;
@@ -373,9 +422,13 @@ export async function enableEmailLogin(formData: FormData) {
     redirect('/settings?error=' + encodeURIComponent('Passwords do not match'));
   }
 
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) {
-    redirect('/settings?error=' + encodeURIComponent(error.message));
+  try {
+    await auth.api.setPassword({
+      body: { newPassword: password },
+      headers: await headers(),
+    });
+  } catch {
+    redirect('/settings?error=' + encodeURIComponent('Could not enable password login. Please try again.'));
   }
 
   const profile = await prisma.profile.findUnique({
@@ -391,8 +444,7 @@ export async function enableEmailLogin(formData: FormData) {
 }
 
 export async function changePassword(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/auth/login');
 
   const currentPassword = formData.get('currentPassword') as string;
@@ -403,17 +455,13 @@ export async function changePassword(formData: FormData) {
     redirect('/settings?error=' + encodeURIComponent('New passwords do not match'));
   }
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: user.email!,
-    password: currentPassword,
-  });
-  if (signInError) {
+  try {
+    await auth.api.changePassword({
+      body: { currentPassword, newPassword },
+      headers: await headers(),
+    });
+  } catch {
     redirect('/settings?error=' + encodeURIComponent('Current password is incorrect'));
-  }
-
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) {
-    redirect('/settings?error=' + encodeURIComponent(error.message));
   }
 
   revalidatePath('/settings');
@@ -421,23 +469,21 @@ export async function changePassword(formData: FormData) {
 }
 
 export async function disablePasswordLogin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/auth/login');
 
-  const identities = user.identities;
-  if (!identities || identities.length <= 1) {
+  const { total } = await countAllMethods(user.id, user.email ?? '');
+  if (total.size <= 1) {
     redirect('/settings?error=' + encodeURIComponent('Cannot disable your last authentication method'));
   }
 
-  const emailIdentity = identities?.find((i) => i.provider === 'email');
-  if (!emailIdentity) {
+  try {
+    await auth.api.unlinkAccount({
+      body: { providerId: 'credential' },
+      headers: await headers(),
+    });
+  } catch {
     redirect('/settings?error=' + encodeURIComponent('Password Login is not enabled'));
-  }
-
-  const { error } = await supabase.auth.unlinkIdentity(emailIdentity);
-  if (error) {
-    redirect('/settings?error=' + encodeURIComponent(error.message));
   }
 
   revalidatePath('/settings');
@@ -445,29 +491,43 @@ export async function disablePasswordLogin() {
 }
 
 export async function forgotPassword(formData: FormData) {
-  const supabase = await createClient();
-  const email = formData.get('email') as string;
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
-  });
+  const baUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  const legacy = await findLegacyUserByEmail(email);
+  if (!baUser && !legacy) {
+    redirect('/auth/forgot-password?error=' + encodeURIComponent('No account found with this email'));
+  }
 
-  if (error) {
-    redirect('/auth/forgot-password?error=' + encodeURIComponent(error.message));
+  try {
+    await auth.api.requestPasswordReset({
+      body: { email },
+      headers: await headers(),
+    });
+  } catch {
+    // Never reveal whether the address exists on OAuth-only flows.
   }
 
   redirect('/auth/forgot-password?message=Check+your+email+for+the+reset+link');
 }
 
 export async function completeOAuthRegistration(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect('/auth/login');
 
   const next = formData.get('next') as string;
   const safeNext = next && isInternalRoute(next) ? next : '/';
 
-  const existing = await prisma.profile.findUnique({ where: { userId: user.id }, select: { registrationComplete: true } });
+  const adopted = await adoptLegacyProfile(user.id, user.email ?? '');
+  if (adopted?.registrationComplete) {
+    revalidatePath('/', 'layout');
+    redirect(safeNext);
+  }
+
+  const existing = await prisma.profile.findUnique({
+    where: { userId: user.id },
+    select: { registrationComplete: true },
+  });
   if (existing?.registrationComplete) {
     redirect(safeNext);
   }
@@ -475,7 +535,6 @@ export async function completeOAuthRegistration(formData: FormData) {
   const username = (formData.get('username') as string)?.toLowerCase().trim();
   const password = formData.get('password') as string;
   const confirmPassword = formData.get('confirmPassword') as string;
-  const emailField = formData.get('email') as string | null;
 
   if (formData.get('consent') !== 'true') {
     redirect('/auth/complete-registration?error=' + encodeURIComponent('You must agree to the Terms of Service and Privacy Policy before completing your account'));
@@ -493,24 +552,18 @@ export async function completeOAuthRegistration(formData: FormData) {
     redirect('/auth/complete-registration?error=' + encodeURIComponent('Passwords do not match'));
   }
 
-  if (!user.email && emailField) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField)) {
-      redirect('/auth/complete-registration?error=' + encodeURIComponent('Please enter a valid email address'));
-    }
-    const { error: emailError } = await supabase.auth.updateUser({ email: emailField });
-    if (emailError) {
-      redirect('/auth/complete-registration?error=' + encodeURIComponent(emailError.message));
-    }
-  }
-
   const taken = await prisma.profile.findUnique({ where: { username } });
   if (taken) {
     redirect('/auth/complete-registration?error=' + encodeURIComponent('Username already taken'));
   }
 
-  const { error: pwError } = await supabase.auth.updateUser({ password });
-  if (pwError) {
-    redirect('/auth/complete-registration?error=' + encodeURIComponent(pwError.message));
+  try {
+    await auth.api.setPassword({
+      body: { newPassword: password },
+      headers: await headers(),
+    });
+  } catch {
+    redirect('/auth/complete-registration?error=' + encodeURIComponent('Failed to set password. Please try again.'));
   }
 
   try {
@@ -518,20 +571,16 @@ export async function completeOAuthRegistration(formData: FormData) {
       data: {
         userId: user.id,
         username,
-        displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? username,
+        displayName: user.name ?? username,
         registrationComplete: true,
         consentAccepted: true,
         consentVersion: 'v1',
       },
     });
   } catch (dbErr) {
-    console.error("[completeOAuthRegistration] Profile create FAILED:", dbErr);
+    console.error('[completeOAuthRegistration] Profile create FAILED:', dbErr);
     redirect('/auth/complete-registration?error=' + encodeURIComponent('Failed to create profile. Please try again.'));
   }
-
-  await supabase.auth.updateUser({
-    data: { registration_complete: true },
-  });
 
   await checkAndGrantReward(user.id);
 
@@ -548,27 +597,8 @@ export interface CurrentUser {
   isAdmin: boolean;
 }
 
-function resolveAvatarUrl(user: {
-  user_metadata?: Record<string, unknown> | null;
-  identities?: Array<{ provider: string; id: string; identity_data?: Record<string, unknown> | null }> | null;
-}): string | null {
-  const meta = user.user_metadata ?? {};
-  const direct = (meta.avatar_url as string) || (meta.picture as string);
-  if (direct) return direct;
-
-  for (const identity of user.identities ?? []) {
-    const data = identity.identity_data ?? {};
-    const fromData = (data.avatar_url as string) || (data.picture as string);
-    if (fromData) return fromData;
-    if (identity.provider === 'discord' && typeof data.avatar === 'string' && identity.id) {
-      return `https://cdn.discordapp.com/avatars/${identity.id}/${data.avatar}.png`;
-    }
-  }
-  return null;
-}
-
-export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const user = await getSupabaseUser();
+async function _getCurrentUser(): Promise<CurrentUser | null> {
+  const user = await getAuthUser();
   if (!user) return null;
 
   const adminEmails = (process.env.ADMIN_EMAILS || '')
@@ -576,14 +606,19 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     .map((e) => e.trim().toLowerCase());
 
   const email = user.email ?? '';
-  const username = user.user_metadata?.username ?? email.split('@')[0] ?? '';
+  const profile = await prisma.profile.findUnique({
+    where: { userId: user.id },
+    select: { username: true, displayName: true },
+  });
 
   return {
     id: user.id,
     email: user.email ?? null,
-    username,
-    avatarUrl: resolveAvatarUrl(user),
-    displayName: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+    username: profile?.username ?? user.name?.toLowerCase() ?? email.split('@')[0] ?? '',
+    avatarUrl: user.image,
+    displayName: profile?.displayName ?? user.name ?? null,
     isAdmin: adminEmails.includes(email.toLowerCase()),
   };
 }
+
+export const getCurrentUser = cache(_getCurrentUser);

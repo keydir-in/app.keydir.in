@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: 'Create Account | KeyDir',
   robots: { index: false, follow: false },
 };
+
+// Reads searchParams (error message) directly — opt out of the instant shell.
+export const instant = false;
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { AuthTerminal } from '@/components/auth/auth-terminal';
 import { RegisterForm } from '@/components/auth/register-form';

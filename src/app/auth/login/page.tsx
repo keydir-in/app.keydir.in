@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   title: 'Login | KeyDir',
   robots: { index: false, follow: false },
 };
+// Reads searchParams (error/provider/next) directly — opt out of the instant shell.
+export const instant = false;
 import { login } from '@/lib/auth/actions';
 
 const PROVIDER_NAMES: Record<string, string> = {
