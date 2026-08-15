@@ -87,7 +87,14 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // refresh once per day
-    cookieCache: { enabled: true, maxAge: 60 * 5 },
+    cookieCache: {
+      enabled: true,
+      // Encrypt the cached session_data cookie (A256CBC-HS512 JWE) instead of
+      // the default compact format, which stores user/session data in a
+      // base64-readable, HMAC-signed-but-unencrypted cookie.
+      strategy: "jwe",
+      maxAge: 60 * 5,
+    },
   },
   advanced: {
     defaultCookieAttributes: {
@@ -95,6 +102,19 @@ export const auth = betterAuth({
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
     },
+    ipAddress: {
+      // Deployed on Vercel only (no Cloudflare). Vercel's edge overwrites
+      // `x-forwarded-for` with the connecting client IP, so the single-value
+      // header it emits is trustworthy and not client-spoofable. trustedProxies
+      // is intentionally unset: Vercel's proxy IPs are dynamic, and the default
+      // already rejects multi-value (spoofable) chains.
+      ipAddressHeaders: ["x-forwarded-for"],
+    },
+  },
+  experimental: {
+    // Prisma adapter: merges session+user (and user+account) lookups into one
+    // query via include. Relations are already defined in schema.prisma.
+    joins: true,
   },
   plugins: [
     dash({
