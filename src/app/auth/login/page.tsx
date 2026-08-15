@@ -119,7 +119,7 @@ export default async function LoginPage({
                   <label htmlFor="remember">Remember Me</label>
                 </div>
                 <div className="auth-forgot-link">
-                  <Link href="/auth/forgot-password">Forgot Password?</Link>
+                  <Link href="/forgot-password">Forgot Password?</Link>
                 </div>
               </div>
 

@@ -4,71 +4,116 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { AuthTerminal } from '@/components/auth/auth-terminal';
+import { PasswordInput } from '@/components/auth/password-input';
 import { authClient } from '@/lib/auth-client';
 
 /**
  * Sets a new password with the one-time reset token that Better Auth placed
- * in the reset link (the `sendResetPassword` callback logs the link locally;
- * wire an SMTP provider in src/lib/auth.ts to email it).
+ * in the reset link (sent by email via Resend). Validates the new password
+ * (minimum 8 characters, confirmation must match), prevents duplicate
+ * submissions, and maps every reset failure to a generic "invalid or expired"
+ * message so internal errors are never exposed.
  */
 export function ResetPasswordForm({ token }: { token: string }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    if (loading || submitted) return;
     setError('');
 
     const form = new FormData(e.currentTarget);
     const password = form.get('password') as string;
+    const confirmPassword = form.get('confirmPassword') as string;
 
-    const { error: err } = await authClient.resetPassword({ newPassword: password, token });
+    if (!password || password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
 
-    if (err) {
-      setError(err.message || 'Unable to reset password. The link may be invalid or expired.');
+    setLoading(true);
+    try {
+      const { error: err } = await authClient.resetPassword({
+        newPassword: password,
+        token,
+      });
+
+      if (err) {
+        setError(
+          'This password reset link is invalid or has expired.',
+        );
+      } else {
+        setSubmitted(true);
+        setSuccess(true);
+      }
+    } catch {
+      setError('This password reset link is invalid or has expired.');
+    } finally {
       setLoading(false);
-    } else {
-      setSuccess(true);
     }
   }
 
   return (
-    <AuthLayout title={'SET NEW\nPASSWORD.'}>
+    <AuthLayout title={'RESET\nYOUR\nPASSWORD.'}>
       <AuthTerminal>
         {error && <div className="auth-msg error" role="alert">{error}</div>}
 
         {success ? (
           <div className="auth-message-page">
             <div className="auth-msg-icon">{'\u2713'}</div>
-            <h2>Password Updated</h2>
-            <p>Your password has been changed successfully.</p>
-            <div className="auth-alt-link auth-gap">
-              <Link href="/auth/login">Login {'\u2192'}</Link>
+            <h2>Password updated successfully.</h2>
+            <div className="auth-oauth-actions">
+              <Link href="/auth/login" className="btn-primary auth-btn">
+                Sign in
+              </Link>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="reset-password">New Password</label>
-              <input
-                type="password"
-                name="password"
-                id="reset-password"
-                required
-                minLength={8}
-                placeholder="{'\u2022'}{'\u2022'}{'\u2022'}{'\u2022'}{'\u2022'}{'\u2022'}{'\u2022'}{'\u2022'}"
-                className="auth-input"
-                autoComplete="new-password"
-                aria-label="New password"
-              />
-            </div>
+          <>
+            <form onSubmit={handleSubmit}>
+              <div className="auth-field">
+                <label className="auth-label" htmlFor="reset-password">New Password</label>
+                <PasswordInput
+                  name="password"
+                  id="reset-password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  aria-label="New password"
+                />
+              </div>
+              <div className="auth-field">
+                <label className="auth-label" htmlFor="reset-confirm">Confirm Password</label>
+                <PasswordInput
+                  name="confirmPassword"
+                  id="reset-confirm"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  aria-label="Confirm new password"
+                />
+              </div>
 
-            <button type="submit" className="btn-primary auth-btn auth-btn-tight" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Password \u2192'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="btn-primary auth-btn auth-btn-tight"
+                disabled={loading || submitted}
+              >
+                {loading ? 'Resetting...' : 'Reset Password \u2192'}
+              </button>
+            </form>
+
+            <div className="auth-alt-link">
+              <Link href="/forgot-password">Request a new reset link</Link>
+            </div>
+          </>
         )}
 
         <div className="auth-alt-link">

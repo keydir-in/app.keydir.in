@@ -59,6 +59,9 @@ const MOB_RESOURCES = [
 
 export function Navbar() {
   const pathname = usePathname();
+  // Never send users back to an auth page after login (redirect loop), and
+  // keep the href stable across SSR/hydration where pathname can differ.
+  const loginNext = pathname.startsWith('/auth') ? '/' : pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -244,7 +247,7 @@ export function Navbar() {
               </div>
             </div>
           ) : (
-            <Link href={`/auth/login?next=${encodeURIComponent(pathname)}`} className="nav-login">
+            <Link href={`/auth/login?next=${encodeURIComponent(loginNext)}`} className="nav-login">
               Login
             </Link>
           )}
@@ -295,7 +298,7 @@ export function Navbar() {
               </div>
             </Link>
           ) : (
-            <Link href={`/auth/login?next=${encodeURIComponent(pathname)}`} className="mob-drawer-user" onClick={closeMobile}>
+            <Link href={`/auth/login?next=${encodeURIComponent(loginNext)}`} className="mob-drawer-user" onClick={closeMobile}>
               <div className="mob-drawer-avatar">
                 <User size={20} />
               </div>
@@ -367,7 +370,7 @@ export function Navbar() {
                 </form>
               </>
             ) : (
-              <Link href={`/auth/login?next=${encodeURIComponent(pathname)}`} className="mob-drawer-item" onClick={closeMobile}>
+              <Link href={`/auth/login?next=${encodeURIComponent(loginNext)}`} className="mob-drawer-item" onClick={closeMobile}>
                 <User size={18} strokeWidth={1.5} className="mob-drawer-icon" />
                 <span>Sign In</span>
               </Link>

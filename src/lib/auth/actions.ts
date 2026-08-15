@@ -493,22 +493,42 @@ export async function disablePasswordLogin() {
 export async function forgotPassword(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
-  const baUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  const legacy = await findLegacyUserByEmail(email);
-  if (!baUser && !legacy) {
-    redirect('/auth/forgot-password?error=' + encodeURIComponent('No account found with this email'));
-  }
+  // Safe server-side diagnostics only — never log the reset token, password,
+  // or full reset URL. The recipient is masked.
+  console.info(`[KeyDir] reset request started (recipient=${maskEmail(email)})`);
 
+  // Always issue a reset request and always show the same generic response.
+  // This deliberately does not reveal whether the email has an account, and
+  // does not special-case social-only (Google/Discord) accounts. `redirectTo`
+  // is the KeyDir reset-password UI: Better Auth validates the token at the
+  // callback route and redirects there with `?token=...` (or `?error=...`).
   try {
     await auth.api.requestPasswordReset({
-      body: { email },
+      body: { email, redirectTo: "/reset-password" },
       headers: await headers(),
     });
-  } catch {
-    // Never reveal whether the address exists on OAuth-only flows.
+    console.info('[KeyDir] reset request: Better Auth accepted the request');
+  } catch (err) {
+    // Never reveal failures (network, provider, OAuth-only, non-existent).
+    console.warn(
+      `[KeyDir] reset request: Better Auth rejected request (type=${err instanceof Error ? err.name : 'unknown'})`,
+    );
   }
 
-  redirect('/auth/forgot-password?message=Check+your+email+for+the+reset+link');
+  redirect(
+    '/forgot-password?message=' +
+      encodeURIComponent("If an account exists for this email, we've sent a password reset link."),
+  );
+}
+
+function maskEmail(email: string): string {
+  const idx = email.indexOf('@');
+  if (idx <= 0) return '***';
+  const local = email.slice(0, idx);
+  const domain = email.slice(idx);
+  const visible = local.slice(0, 2);
+  const rest = local.slice(2);
+  return `${visible}${'*'.repeat(Math.max(rest.length, 3))}${domain}`;
 }
 
 export async function completeOAuthRegistration(formData: FormData) {

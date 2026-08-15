@@ -15,6 +15,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { dash } from "@better-auth/infra";
 import { prisma } from "@/lib/prisma";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 const baseURL =
   process.env.BETTER_AUTH_URL ||
@@ -35,21 +36,32 @@ export const auth = betterAuth({
   ].filter(Boolean),
   emailAndPassword: {
     enabled: true,
-    // Email confirmation is handled out-of-band (currently no mailer is
-    // wired up). Keeping this off avoids a dead-end "verify your email"
-    // page that can never actually deliver a link.
+    // Email confirmation is handled out-of-band. Keeping this off avoids a
+    // dead-end "verify your email" page until verification emails exist.
     requireEmailVerification: false,
-    // No SMTP provider is configured yet. For local development this prints
-    // the reset link so the flow can be tested; in production it only logs
-    // that a reset was requested (never the token).
+    // Sends the Better Auth-generated reset link by email (Resend). Accounts
+    // that only have Google/Discord OAuth (no password credential) are skipped
+    // so a reset link can never be used to grant a password to a social-only
+    // account. The caller still receives the generic "if an account exists"
+    // response, so account existence is not revealed.
     sendResetPassword: async ({ user, url }) => {
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[KeyDir] Password reset link for ${user.email}: ${url}`);
-      } else {
-        console.warn(
-          `[KeyDir] sendResetPassword is not configured — reset requested for ${user.email}`
-        );
-      }
+      const hasPassword = await prisma.account.findFirst({
+        where: { userId: user.id, providerId: "credential" },
+        select: { id: true },
+      });
+      if (!hasPassword) return;
+
+      // Better Auth generates the reset link itself, as
+      // `${baseURL}/reset-password/<token>?callbackURL=<redirectTo>`, using
+      // BETTER_AUTH_URL / NEXT_PUBLIC_APP_URL. We send it unchanged: clicking
+      // it hits the Better Auth callback route, which validates the token and
+      // redirects to the KeyDir reset-password UI (`/reset-password?token=...`).
+      // No manual token construction or URL rewriting here.
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        url,
+      });
     },
   },
   socialProviders: {
