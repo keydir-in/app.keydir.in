@@ -13,7 +13,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { dash } from "@better-auth/infra";
+import { dash, sentinel } from "@better-auth/infra";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
 
@@ -122,6 +122,21 @@ export const auth = betterAuth({
       // Omit apiUrl/kvUrl when unset so the plugin falls back to its own
       // INFRA_API_URL / INFRA_KV_URL defaults (passing `undefined` here
       // overrides those defaults and breaks outbound JWKS/KV calls).
+      ...(process.env.BETTER_AUTH_API_URL
+        ? { apiUrl: process.env.BETTER_AUTH_API_URL }
+        : {}),
+      ...(process.env.BETTER_AUTH_KV_URL
+        ? { kvUrl: process.env.BETTER_AUTH_KV_URL }
+        : {}),
+    }),
+    // Sentinel security monitoring (blocked/challenged/allowed requests,
+    // suspicious activity, IP/security events). Shares the same Dash API
+    // connection as `dash`. No security rules are enabled here, so it only
+    // records/tracks events and never blocks or challenges legitimate users.
+    sentinel({
+      apiKey: process.env.BETTER_AUTH_API_KEY || undefined,
+      // Omit apiUrl/kvUrl when unset so the plugin falls back to its own
+      // INFRA_API_URL / INFRA_KV_URL defaults.
       ...(process.env.BETTER_AUTH_API_URL
         ? { apiUrl: process.env.BETTER_AUTH_API_URL }
         : {}),

@@ -3,11 +3,20 @@
  * sign-in, sign-out, session fetching, and password operations.
  */
 import { createAuthClient } from "better-auth/react";
-import { dashClient } from "@better-auth/infra/client";
+import { dashClient, sentinelClient } from "@better-auth/infra/client";
 
 export const authClient = createAuthClient({
   baseURL:
     process.env.NEXT_PUBLIC_APP_URL ||
     (typeof window !== "undefined" ? window.location.origin : undefined),
-  plugins: [dashClient()],
+  plugins: [
+    dashClient(),
+    // Sentinel: sends browser fingerprint/device identification to the
+    // project-scoped KV ingestion URL so the server can attribute security
+    // events to a stable visitor id. The identify URL is public (not a
+    // secret) but environment-specific, so it stays behind NEXT_PUBLIC_.
+    sentinelClient({
+      identifyUrl: process.env.NEXT_PUBLIC_BETTER_AUTH_IDENTIFY_URL,
+    }),
+  ],
 });
