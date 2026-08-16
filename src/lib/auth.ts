@@ -30,6 +30,9 @@ export const auth = betterAuth({
   trustedOrigins: [
     baseURL,
     "http://localhost:3000",
+    // Sibling deployment. Same identity system + shared session cookie, so
+    // requests authenticated on scraper.keydir.in are treated as trusted.
+    "https://scraper.keydir.in",
     // The Better Auth dashboard web UI talks to /api/auth/dash/* endpoints
     // cross-origin during ownership verification and project connect.
     "https://dash.better-auth.com",
@@ -102,13 +105,28 @@ export const auth = betterAuth({
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
     },
+    // Share the session cookie with scraper.keydir.in. Both hosts share the
+    // registrable domain `keydir.in` (same-site), so SameSite=Lax remains
+    // correct — no SameSite=None relaxation is needed. Production-only: a
+    // `.keydir.in` Domain cookie would never be sent back to `localhost`, so
+    // enabling it in dev would break local login.
+    crossSubDomainCookies: {
+      enabled:
+        process.env.NODE_ENV === "production" &&
+        new URL(baseURL).hostname.endsWith("keydir.in"),
+      domain: ".keydir.in",
+    },
     ipAddress: {
       // Deployed on Vercel only (no Cloudflare). Vercel's edge overwrites
-      // `x-forwarded-for` with the connecting client IP, so the single-value
-      // header it emits is trustworthy and not client-spoofable. trustedProxies
-      // is intentionally unset: Vercel's proxy IPs are dynamic, and the default
+      // `x-forwarded-for` with the connecting client IP and also sets
+      // `x-vercel-forwarded-for` to the same value, so both are trustworthy
+      // and not client-spoofable. `x-vercel-forwarded-for` is included
+      // because it is Vercel's canonical client-IP header (it is also the
+      // @better-auth/infra plugin's own platform-trusted default). The first
+      // configured header that resolves is used. trustedProxies is
+      // intentionally unset: Vercel's proxy IPs are dynamic, and the default
       // already rejects multi-value (spoofable) chains.
-      ipAddressHeaders: ["x-forwarded-for"],
+      ipAddressHeaders: ["x-forwarded-for", "x-vercel-forwarded-for"],
     },
   },
   experimental: {
